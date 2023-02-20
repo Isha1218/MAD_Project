@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VERTEX
 VERTEX is an app that allows for communication among 3 types of individuals: students, teachers, and parents. The goal of this app is to ensure that this communciation is as smooth as possible, so that students can have all of the educational resources to succeeed. Hence our motto: VERTEX...the point to connect.
 
@@ -92,3 +93,21 @@ Three authors have significantly contributed their time and efforts to this app:
 * Ishita Mundra
 * Pragya Rana
 * Rishitha Ravi
+=======
+# mad
+
+A new Flutter project.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
+>>>>>>> Pragya
