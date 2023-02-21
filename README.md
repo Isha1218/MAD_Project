@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # VERTEX
 VERTEX is an app that allows for communication among 3 types of individuals: students, teachers, and parents. The goal of this app is to ensure that this communciation is as smooth as possible, so that students can have all of the educational resources to succeeed. Hence our motto: VERTEX...the point to connect.
 
