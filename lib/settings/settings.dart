@@ -1,16 +1,17 @@
-// Package imports
-import 'package:mad/authentication/GoogleSignInApi.dart';
-import 'package:mad/authentication/google_signin.dart';
+import 'package:mad/authentication/google_sign_in_api.dart';
 import 'package:mad/authentication/member_login_page.dart';
 import 'package:mad/settings/change_pronouns.dart';
+import 'package:mad/settings/instructions.dart';
+import 'package:mad/settings/instructions_parent.dart';
 import 'package:mad/settings/policy.dart';
 import 'package:mad/settings/recommendation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import "package:google_sign_in/google_sign_in.dart";
-import "package:firebase_auth/firebase_auth.dart";
-import 'package:provider/provider.dart';
+import 'instructions_teacher.dart';
 
+// This widget will display all the settings for the user, including account information,
+// help and permissions, and logout.
 class Setting extends StatefulWidget {
   const Setting({
     Key? key,
@@ -26,16 +27,21 @@ class Setting extends StatefulWidget {
 }
 
 class _SettingState extends State<Setting> {
+  // This will get the user's first and last names and their pronouns before the screen
+  // is initialized.
   @override
   void initState() {
     super.initState();
     getPersonDocuments();
   }
 
+  // Information about the user that will be initialized via Firebase.
   String firstName = "";
   String lastName = "";
   String pronouns = "";
 
+  // This function will get the information about the user by accessing the
+  // students collection and getting the document fields: firstName, lastName, and pronouns.
   Future<void> getPersonDocuments() async {
     var studentCollection = await FirebaseFirestore.instance
         .collection(widget.person)
@@ -54,20 +60,21 @@ class _SettingState extends State<Setting> {
     }
   }
 
+  // This will layout all of the elements in the settings page.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xff78CAD2),
       body: SingleChildScrollView(
-        // Vertical scroll
         scrollDirection: Axis.vertical,
-
-        // Column of all elements (both blue and white parts)
         child: LayoutBuilder(builder: (context, constraints) {
+          // Progress circle will appear if no information about the user has
+          // be initialized.
           if (firstName == "" || lastName == "" || pronouns == "") {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(8.0, 40.0, 8.0, 0.0),
-              child: Text('Loading...'),
+            return Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
             );
           } else {
             return Column(
@@ -84,7 +91,7 @@ class _SettingState extends State<Setting> {
                         ),
                       ),
                     )),
-                // JD circle (profile)
+                // Initials circle (profile)
                 Container(
                   margin: EdgeInsets.fromLTRB(20, 20, 20, 0),
                   width: 75,
@@ -124,8 +131,8 @@ class _SettingState extends State<Setting> {
                   padding: EdgeInsets.all(5.0),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(40),
                     ),
                     color: Color(0xffF7F7F7),
                   ),
@@ -138,7 +145,9 @@ class _SettingState extends State<Setting> {
                         person: widget.person,
                         user: widget.user,
                       ),
-                      BottomThree(),
+                      BottomThree(
+                        person: widget.person,
+                      ),
                       Logout(),
                     ],
                   ),
@@ -152,7 +161,7 @@ class _SettingState extends State<Setting> {
   }
 }
 
-// Top three setting features
+// This will build the account information settings items.
 class TopThree extends StatefulWidget {
   const TopThree({
     required this.firstName,
@@ -178,7 +187,6 @@ class _TopThreeState extends State<TopThree> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Heading of top three setting features
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
           child: Text(
@@ -190,8 +198,6 @@ class _TopThreeState extends State<TopThree> {
             ),
           ),
         ),
-
-        // Top three setting features arranged in a column
         Container(
           margin: EdgeInsets.all(15.0),
           padding: EdgeInsets.all(15.0),
@@ -225,7 +231,7 @@ class _TopThreeState extends State<TopThree> {
                   child: Row(
                 children: [
                   SettingItemsTop(
-                      color: Color(0xffFFD863),
+                      color: Color.fromARGB(255, 251, 207, 74),
                       settingName: 'Person',
                       settingDisplay: (widget.person
                               .substring(0, 1)
@@ -250,7 +256,7 @@ class _TopThreeState extends State<TopThree> {
                             settingName: 'Pronouns',
                             settingDisplay: widget.pronouns,
                             icon: Icon(
-                              Icons.transgender_rounded,
+                              Icons.wc,
                               color: Colors.white,
                             )),
                       ),
@@ -298,9 +304,11 @@ class _TopThreeState extends State<TopThree> {
   }
 }
 
-// Bottom three setting features
+// This will build the help and permissions settings items.
 class BottomThree extends StatefulWidget {
-  const BottomThree({super.key});
+  const BottomThree({super.key, required this.person});
+
+  final String person;
 
   @override
   State<BottomThree> createState() => _BottomThreeState();
@@ -381,8 +389,8 @@ class _BottomThreeState extends State<BottomThree> {
                                 Icons.question_mark,
                                 color: Colors.white,
                               ),
-                              item: 'Help',
-                              color: Color(0xffFFD863)),
+                              item: 'Instructions',
+                              color: Color.fromARGB(255, 251, 207, 74)),
                         ),
                         Expanded(
                             flex: 1,
@@ -392,7 +400,27 @@ class _BottomThreeState extends State<BottomThree> {
                             ))
                       ],
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      if (widget.person == 'students') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => Instructions()),
+                        );
+                      } else if (widget.person == 'teachers') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => InstructionsTeacher()),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => InstructionsParent()),
+                        );
+                      }
+                    },
                   )),
                   Divider(),
                   Container(
@@ -437,7 +465,7 @@ class _BottomThreeState extends State<BottomThree> {
   }
 }
 
-// Each setting feature arranged in certain way for top three setting tiems
+// Each setting feature arranged in certain way for top three setting items, which this widget takes care of.
 class SettingItemsTop extends StatelessWidget {
   final Color color;
   final String settingName;
@@ -488,7 +516,7 @@ class SettingItemsTop extends StatelessWidget {
   }
 }
 
-// Each setting feature arranged in certain way for bottom three setting tiems
+// Each setting feature arranged in certain way for bottom three setting items, which this widget takes care of.
 class SettingItemsBottom extends StatelessWidget {
   final Icon icon;
   final String item;
@@ -541,7 +569,6 @@ class Logout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Heading
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
           child: Text(
@@ -553,8 +580,6 @@ class Logout extends StatelessWidget {
             ),
           ),
         ),
-
-        // Row of the setting feature
         Container(
           margin: EdgeInsets.all(15.0),
           padding: EdgeInsets.all(15.0),
@@ -587,6 +612,8 @@ class Logout extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Uses the GoogleSignInApi class to logout.
             onPressed: () async {
               await GoogleSignInApi.logout();
               Navigator.of(context).pushReplacement(

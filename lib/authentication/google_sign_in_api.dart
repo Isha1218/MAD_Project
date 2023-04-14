@@ -1,5 +1,6 @@
 import 'package:google_sign_in/google_sign_in.dart';
 
+// This class uses the GoogleSignIn class to handle authorization.
 class GoogleSignInApi {
   static final _googleSignIn = GoogleSignIn();
 

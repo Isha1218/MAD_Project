@@ -44,6 +44,21 @@ dependencies:
   google_sign_in: ^5.4.2
   provider: ^6.0.5
   get: ^4.6.5
+  google_nav_bar: ^5.0.6
+  flutter_swiper: ^1.1.6
+  flutter_slidable: ^2.0.0
+  flutter_event_calendar: ^1.0.0
+  syncfusion_flutter_datepicker: ^18.4.46-beta
+  simple_time_range_picker: ^0.0.5
+  flutter_email_sender: ^5.2.0
+  font_awesome_flutter: ^10.4.0
+  drop_shadow_image: ^0.9.1
+  chat_bubbles: ^1.4.1
+  image_picker: ^0.8.7+1
+  # fluttertoast: ^8.2.1
+  webview_flutter: ^4.0.7
+  permission_handler: ^10.2.0
+  firebase_storage: ^11.1.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -53,6 +68,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.12.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -73,9 +89,23 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - images/logo.png
+    - images/dance_tickets.jpg
+    - images/asb_card.jpg
+    - images/football_tickets.jpg
+    - images/nchs_sticker.jpg
+    - images/parking.jpg
+    - images/soccer_tickets.jpg
+    - images/tennis_jersey.jpg
+    - images/tennis_racket.jpg
   #   - images/a_dot_ham.jpeg
+
+flutter_icons:
+  image_path: "images/logo_with_background.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -1,139 +1,82 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:mad/asb/asb.dart';
-import 'package:mad/authentication/GoogleSignInApi.dart';
+import 'package:mad/clubhub/browse_clubs.dart';
 import 'package:mad/calendar/calendar.dart';
 import 'package:mad/home/home.dart';
 import 'package:mad/settings/settings.dart';
 import 'package:flutter/material.dart';
-import 'package:mad/messages.dart';
-import 'package:mad/absences.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
+import '../bookkeeper/bookkeeper_page.dart';
 
+// This widget displays the tab bar at the bottom of the screen.
 class StudentTab extends StatefulWidget {
-  const StudentTab({Key? key, required this.user}) : super(key: key);
+  StudentTab({Key? key, required this.user, required this.selectedIndex})
+      : super(key: key);
 
   final GoogleSignInAccount user;
+  int selectedIndex;
 
   @override
   State<StudentTab> createState() => _StudentTabState();
 }
 
 class _StudentTabState extends State<StudentTab> {
-  List<Widget> getPages() {
-    return <Widget>[
-      Home(user: widget.user),
-      Calendar(user: widget.user),
-      Setting(
-        person: 'students',
-        user: widget.user,
-      ),
-      ASB(),
-      AbsencesPage(),
-    ];
-  }
-
-  int pageIndex = 0;
-
   @override
   Widget build(BuildContext context) {
+    // These are the list of tabs at the bottom.
+    List<Widget> navItems = [
+      Home(user: widget.user),
+      Calendar(user: widget.user),
+      BrowseClubs(user: widget.user),
+      BookkeeperPage(
+        user: widget.user,
+      ),
+      Setting(person: 'students', user: widget.user),
+    ];
+
     return Scaffold(
-      body: getPages()[pageIndex],
+      body: navItems.elementAt(widget.selectedIndex),
       bottomNavigationBar: Container(
-        height: 70,
-        color: Colors.black,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  pageIndex = 0;
-                });
-              },
-              icon: pageIndex == 0
-                  ? Icon(
-                      Icons.home_filled,
-                      color: Colors.white,
-                      size: 35,
-                    )
-                  : Icon(
-                      Icons.home_outlined,
-                      color: Colors.white,
-                      size: 35,
-                    ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  pageIndex = 1;
-                });
-              },
-              icon: pageIndex == 1
-                  ? Icon(
-                      Icons.calendar_month_rounded,
-                      color: Colors.white,
-                      size: 35,
-                    )
-                  : Icon(
-                      Icons.calendar_month_outlined,
-                      color: Colors.white,
-                      size: 35,
-                    ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  pageIndex = 2;
-                });
-              },
-              icon: pageIndex == 2
-                  ? Icon(
-                      Icons.settings_rounded,
-                      color: Colors.white,
-                      size: 35,
-                    )
-                  : Icon(
-                      Icons.settings_outlined,
-                      color: Colors.white,
-                      size: 35,
-                    ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  pageIndex = 3;
-                });
-              },
-              icon: pageIndex == 3
-                  ? Icon(
-                      Icons.school,
-                      color: Colors.white,
-                      size: 35,
-                    )
-                  : Icon(
-                      Icons.school_outlined,
-                      color: Colors.white,
-                      size: 35,
-                    ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  pageIndex = 4;
-                });
-              },
-              icon: pageIndex == 4
-                  ? Icon(
-                      Icons.message,
-                      color: Colors.white,
-                      size: 35,
-                    )
-                  : Icon(
-                      Icons.message_outlined,
-                      color: Colors.white,
-                      size: 35,
-                    ),
-            )
-          ],
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 20.0),
+
+          // The Google Nav Bar package was used to display the tab bar in a neat view.
+          child: GNav(
+            gap: 8,
+            backgroundColor: Colors.transparent,
+            color: Colors.black,
+            activeColor: Colors.white,
+            tabBackgroundColor: Color(0xff3A404C),
+            selectedIndex: widget.selectedIndex,
+            onTabChange: (index) {
+              setState(() {
+                widget.selectedIndex = index;
+              });
+            },
+            padding: EdgeInsets.all(12),
+            tabs: [
+              GButton(
+                icon: Icons.home,
+                text: 'Home',
+              ),
+              GButton(
+                icon: Icons.calendar_month,
+                text: 'Calendar',
+              ),
+              GButton(
+                icon: Icons.info,
+                text: 'ClubHub',
+              ),
+              GButton(
+                icon: Icons.monetization_on,
+                text: 'Bookkeeper',
+              ),
+              GButton(
+                icon: Icons.settings,
+                text: 'Settings',
+              )
+            ],
+          ),
         ),
       ),
     );

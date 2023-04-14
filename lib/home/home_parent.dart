@@ -1,24 +1,23 @@
-// At bottom, list of all children
-// When student is clicked, absence can be reported
-// At top, event that each child is a part of
 
 import 'package:flutter/material.dart';
+// ignore: import_of_legacy_library_into_null_safe
+import 'package:flutter_swiper/flutter_swiper.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:mad/classes/child.dart';
-import 'package:mad/classes/school_class.dart';
-import 'package:mad/classes/icon_tags.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:intl/intl.dart';
-import 'package:mad/classes/club.dart';
-import 'package:mad/home/display_clubs_or_classes.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'carousel_page.dart';
 import 'package:mad/classes/event.dart';
+import 'package:mad/classes/icon_tags.dart';
+import 'package:mad/home/studentAbsences.dart';
+import 'package:mad/tabs/parent_tab.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../classes/child.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
+// This widget will display the home page for the parent.
+// It will display a snapshot of the events of the activities that the user's children are
+// a part of.
+// It will also display the list of children, so that the parent can report absences for their child.
 class HomeParent extends StatefulWidget {
-  const HomeParent({Key? key, required this.user}) : super(key: key);
+  const HomeParent({super.key, required this.user});
 
   final GoogleSignInAccount user;
 
@@ -27,15 +26,42 @@ class HomeParent extends StatefulWidget {
 }
 
 class _HomeParentState extends State<HomeParent> {
+  // This will get the parent's first name and the list of children and the events the children are a part of.
   @override
   void initState() {
     super.initState();
+    getFirstName();
     getChildrenDocuments();
   }
 
+  // This list will contain all of the events from activities that the children are a part of.
   List<Event> events = [];
+
+  // This list will contain all of the children of the parent.
   List<Child> childrenList = [];
 
+  // This will record the parent's first name to display.
+  String firstName = '';
+
+  // This function will get the user's first name by accessing the parents collection
+  // and finding the doc id of the parent to access the firstName document field.
+  Future<void> getFirstName() async {
+    var docSnapshot = await FirebaseFirestore.instance
+        .collection('parents')
+        .doc(widget.user.displayName?.replaceAll(' ', '_').toLowerCase())
+        .get();
+
+    if (docSnapshot.exists) {
+      setState(() {
+        firstName = docSnapshot.data()!['firstName'];
+      });
+    }
+  }
+
+  // This function will get the list of the parent's children.
+  // It will access the parent collection and then the students collection.
+  // It will then take the student reference and access the students collection
+  // and add the child to the children list and children's events to the events list.
   Future<void> getChildrenDocuments() async {
     await FirebaseFirestore.instance
         .collection('parents')
@@ -54,13 +80,11 @@ class _HomeParentState extends State<HomeParent> {
                 var docSnapshot = await childCollection.get();
                 if (docSnapshot.exists) {
                   Map<String, dynamic>? data = docSnapshot.data();
-                  print(data!['firstName']);
                   childrenList.add(Child(
-                      data['firstName'],
+                      data!['firstName'],
                       data['lastName'],
                       Icon(Icons.face_rounded,
-                          color: findPronounColor(data['pronouns']),
-                          size: 40)));
+                          color: Color.fromARGB(255, 99, 57, 151), size: 40)));
                 }
 
                 await childCollection
@@ -97,12 +121,16 @@ class _HomeParentState extends State<HomeParent> {
                                         DateTime endTime =
                                             element.data()['endTime'].toDate();
 
+                                        Event thisEvent = new Event(subject,
+                                            tag, startTime, endTime, notes);
+
+                                        // If this activity is not a duplicate, it will be added to the list.
                                         setState(() {
-                                          if (endTime
-                                                  .compareTo(DateTime.now()) >
-                                              0) {
-                                            events.add(Event(subject, tag,
-                                                startTime, endTime, notes));
+                                          if (endTime.compareTo(
+                                                      DateTime.now()) >
+                                                  0 &&
+                                              !isDuplicated(thisEvent)) {
+                                            events.add(thisEvent);
 
                                             events.sort((a, b) {
                                               return a.endTime
@@ -116,6 +144,8 @@ class _HomeParentState extends State<HomeParent> {
                         });
               })
             });
+
+    // Since all students are from NCHS, all events in this collection will be accessed as well.
     await FirebaseFirestore.instance
         .collection('activities')
         .doc('nchs')
@@ -145,170 +175,458 @@ class _HomeParentState extends State<HomeParent> {
             });
   }
 
-  final _controller = PageController();
+  // This function will check if the events have been duplicated in the list.
+  // Two children may belong to the same activity, and therefore, have the same events.
+  bool isDuplicated(Event thisEvent) {
+    for (var event in events) {
+      if (event.subject == thisEvent.subject &&
+          event.notes == thisEvent.notes &&
+          event.startTime == thisEvent.startTime &&
+          event.endTime == thisEvent.endTime) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-  bool isFirst = true;
-
+  // This will lay out the events and children in a nice manner.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Color(0xff78CAD2),
-        body: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+      backgroundColor: Color(0xffF7F7F7),
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: LayoutBuilder(builder: (context, constraints) {
+          if (childrenList.length == 0) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
+            );
+          } else {
+            return Stack(
               children: [
-                Text('VERTEX',
-                    style: GoogleFonts.bungee(
-                      textStyle: TextStyle(
-                        shadows: [
-                          Shadow(
-                            offset: Offset(3.0, 3.0),
-                            blurRadius: 3.0,
-                            color:
-                                Color.fromARGB(255, 0, 0, 0).withOpacity(0.25),
-                          ),
-                        ],
-                        color: Colors.white,
-                        fontSize: 32.5,
-                        fontWeight: FontWeight.bold,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                      child: Text(
+                        'Welcome back',
+                        style: TextStyle(color: Colors.grey[500]),
                       ),
-                    )),
-                SizedBox(
-                  height: 20,
-                ),
-                SizedBox(
-                    height: 150,
-                    child: LayoutBuilder(builder: (context, constraints) {
-                      if (events.isEmpty) {
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'No Upcoming Events',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    ),
+                    SizedBox(
+                      height: 5,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        children: [
+                          Text(
+                            firstName,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
                             ),
-                            SizedBox(
-                              height: 25,
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Icon(
+                            Icons.waving_hand,
+                            size: 20,
+                          )
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 30,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Upcoming Events',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
                             ),
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 60,
-                            )
-                          ],
+                          ),
+                          TextButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => ParentTab(
+                                            user: widget.user,
+                                            selectedIndex: 1)));
+                              },
+                              child: Text(
+                                'See all',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                ),
+                              ))
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+
+                    // The Flutter Swiper package is used to display the events.
+                    // Each event can be browsed by sliding. This pacakge displays the events in a cool
+                    // stack layout.
+                    // Events that have 0 or 1 event will not use the Swiper package.
+                    LayoutBuilder(builder: (context, constraints) {
+                      if (events.length > 1) {
+                        return Swiper(
+                          loop: events.length == 1 ? false : true,
+                          itemBuilder: (BuildContext context, int index) {
+                            print(events.length);
+                            if (events.length != 0) {
+                              return EventCard(event: events[index]);
+                            } else {
+                              return Text('');
+                            }
+                          },
+                          itemCount: events.length > 5 ? 5 : events.length,
+                          itemWidth: MediaQuery.of(context).size.width * 0.8,
+                          itemHeight: MediaQuery.of(context).size.height * 0.18,
+                          layout: SwiperLayout.STACK,
                         );
                       } else if (events.length == 1) {
-                        return PageView(
-                          controller: _controller,
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CarouselPageDisplay(events: events, index: 0)
-                          ],
-                        );
-                      } else if (events.length == 2) {
-                        return PageView(
-                          controller: _controller,
-                          children: [
-                            CarouselPageDisplay(events: events, index: 0),
-                            CarouselPageDisplay(events: events, index: 1),
+                            Container(
+                                width: MediaQuery.of(context).size.width * 0.8,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.18,
+                                child: EventCard(event: events[0])),
                           ],
                         );
                       } else {
-                        return PageView(
-                          controller: _controller,
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CarouselPageDisplay(events: events, index: 0),
-                            CarouselPageDisplay(events: events, index: 1),
-                            CarouselPageDisplay(events: events, index: 2),
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.8,
+                              height: MediaQuery.of(context).size.height * 0.18,
+                              decoration: BoxDecoration(
+                                  color: Color(0xff78CAD2),
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'No Events',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 5,
+                                    ),
+                                    Icon(
+                                      Icons.check,
+                                      size: 40,
+                                      color: Colors.white,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         );
                       }
-                    })),
-                SmoothPageIndicator(
-                  controller: _controller,
-                  count: events.length > 2 ? 3 : events.length,
-                  effect: ExpandingDotsEffect(
-                    activeDotColor: Color(0xff4C2C72),
-                    dotColor: Colors.white,
-                    dotHeight: 10,
-                    dotWidth: 10,
-                  ),
+                    }),
+                    SizedBox(
+                      height: 50,
+                    ),
+                  ],
                 ),
-                Wrap(children: [
-                  Container(
-                    margin: EdgeInsets.fromLTRB(0, 40, 0, 0),
-                    constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height * 0.56,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Color(0xffF7F7F7),
-                      borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20)),
-                    ),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+
+                // Allows the user to drag the list of children to the top of the screen for a more clear view.
+                DraggableScrollableSheet(
+                    initialChildSize: 0.5,
+                    minChildSize: 0.5,
+                    maxChildSize: 1,
+                    builder: (context, scrollController) {
+                      return SingleChildScrollView(
+                        controller: scrollController,
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.85,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(40),
+                              topRight: Radius.circular(40),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                blurRadius: 4,
+                                color: Colors.grey.shade300,
+                              )
+                            ],
+                            color: Colors.white,
+                          ),
+                          padding: EdgeInsets.fromLTRB(0, 5, 0, 0),
+                          child: Column(
                             children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Color(0xff78CAD2),
-                                  borderRadius: BorderRadius.circular(15.0),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                child: Container(
+                                  height: 5,
+                                  width: 90,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(50)),
+                                  ),
                                 ),
-                                child: Padding(
-                                  padding:
-                                      EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 8.0),
-                                  child: Text(
-                                    'Children',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                    ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 15, horizontal: 52),
+                                child: Text(
+                                  'Children',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  child: ListView.builder(
+                                    controller: scrollController,
+                                    itemCount: childrenList.length,
+                                    itemBuilder: (context, index) {
+                                      // When each individual list item is slided to the left, the user
+                                      // will have the option to report an absence for that particular child.
+                                      return Slidable(
+                                          endActionPane: ActionPane(
+                                            motion: const StretchMotion(),
+                                            children: [
+                                              SlidableAction(
+                                                foregroundColor: Colors.white,
+                                                backgroundColor: Color.fromARGB(
+                                                    255, 251, 207, 74),
+                                                icon: Icons.report,
+                                                label: 'Report Absence',
+                                                onPressed: (context) =>
+                                                    Navigator.of(context).push(
+                                                        MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                StudentAbsences(
+                                                                  child: childrenList[
+                                                                          index]
+                                                                      .name
+                                                                      .toLowerCase(),
+                                                                  user: widget
+                                                                      .user,
+                                                                ))),
+                                              ),
+                                            ],
+                                          ),
+                                          child: buildChildren(
+                                              childrenList[index]));
+                                    },
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Container(
-                            child: ClubsOrClassesFormat(list: childrenList))
-                      ],
+                      );
+                    }),
+              ],
+            );
+          }
+        }),
+      ),
+    );
+  }
+
+  // This will create each individual list item for a specific child.
+  // It will have the child's name and an icon to go along with it.
+  Widget buildChildren(Child child) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          children: [
+            ListTile(
+              title: Text(child.name),
+              leading: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: child.icon,
+                ),
+              ),
+            ),
+            Divider(
+              indent: 20,
+              endIndent: 20,
+            )
+          ],
+        ),
+      );
+}
+
+// This will display each individual event in the Swiper
+// It will display an icon, the subject, description, and start/end times of the event.
+class EventCard extends StatelessWidget {
+  const EventCard({super.key, required this.event});
+
+  final Event event;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color(0xff78CAD2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          Row(
+            children: [
+              IconTags(event.tag, true).findIcon(),
+              SizedBox(
+                width: 20,
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.subject,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
                   ),
-                ])
-              ],
-            ),
+                  SizedBox(
+                    height: 5,
+                  ),
+                  Text(
+                    event.notes,
+                    style: TextStyle(color: Color.fromARGB(230, 255, 255, 255)),
+                  ),
+                ],
+              )
+            ],
           ),
-        ));
-  }
-
-  Color findColor(String type) {
-    if (type == "club") {
-      return Color(0xffFFD863);
-    } else if (type == "sports") {
-      return Color(0xff4C2C72);
-    } else {
-      return Color(0xffD56AA0);
-    }
-  }
-
-  Color findPronounColor(String pronoun) {
-    if (pronoun.contains('she')) {
-      return Colors.pink;
-    } else if (pronoun.contains('he')) {
-      return Colors.blue;
-    } else {
-      return Colors.yellow;
-    }
+          SizedBox(
+            height: 25,
+          ),
+          LayoutBuilder(builder: (context, constraints) {
+            if (event.startTime.day == event.endTime.day &&
+                event.startTime.month == event.endTime.month &&
+                event.startTime.year == event.endTime.year) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month,
+                              color: Colors.white,
+                            ),
+                            SizedBox(
+                              width: 8,
+                            ),
+                            Text(
+                              DateFormat('MMM dd').format(event.startTime),
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        )),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.access_time_outlined,
+                              color: Colors.white,
+                            ),
+                            SizedBox(
+                              width: 8,
+                            ),
+                            Text(
+                              DateFormat('h:mm a').format(event.startTime) +
+                                  ' - ' +
+                                  DateFormat('h:mm a').format(event.endTime),
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        )),
+                  )
+                ],
+              );
+            } else {
+              return Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              DateFormat('MMM dd').format(event.startTime) +
+                                  ' - ' +
+                                  DateFormat('MMM dd').format(event.endTime),
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        )),
+                  ),
+                ],
+              );
+            }
+          }),
+        ]),
+      ),
+    );
   }
 }

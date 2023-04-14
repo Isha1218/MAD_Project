@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
-
+// This class represents an individual Event (personal, activity, and NCHS).
+// It has the subject of the event, tag to identifiy an icon to with it, start and end time
+// of the event, and a description (or notes) of the event.
 class Event {
   late String subject;
   late String tag;

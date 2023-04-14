@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// This widget details the licensing & terms of use in case users want to refer back to it.
 class Policy extends StatelessWidget {
   const Policy({super.key});
 

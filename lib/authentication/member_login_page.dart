@@ -1,13 +1,12 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
-import "package:flutter/src/widgets/navigator.dart";
-import '../main.dart';
 import '../tabs/parent_tab.dart';
 import '../tabs/student_tab.dart';
 import '../tabs/teacher_tab.dart';
-import 'GoogleSignInApi.dart';
-//import 'package:google_fonts/google_fonts.dart';
+import 'google_sign_in_api.dart';
 
+// This widget will display the sign in page.
+// It will use the GoogleSignInApi class to assess whether the user
+// able to be successfully authorized.
 class MemberLoginPage extends StatefulWidget {
   const MemberLoginPage({Key? key}) : super(key: key);
 
@@ -23,11 +22,10 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
       body: SafeArea(
         child: Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            // hello again
-            const Text(
+            // Title of app
+            Text(
               'VERTEX',
               style: TextStyle(
-                //style: GoogleFonts.bebasNeue(
                 fontSize: 45,
                 color: Colors.white,
               ),
@@ -35,6 +33,8 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
             SizedBox(
               height: 10,
             ),
+
+            // App slogan
             const Text(
               'THE POINT TO CONNECT',
               style: TextStyle(
@@ -43,17 +43,12 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(
-              height: 50,
-            ),
-            const Icon(
-              Icons.phone_android,
-              size: 150,
-              color: Colors.white,
-            ),
 
-            const SizedBox(height: 50),
-
+            // App logo
+            Image.asset(
+              'images/logo.png',
+              height: 300,
+            ),
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
@@ -67,7 +62,8 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
                 ),
               ),
             ),
-            // student
+
+            // Student sign in button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
               child: Container(
@@ -92,10 +88,9 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
                 )),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // parent
+            // Parent sign in button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
               child: Container(
@@ -108,7 +103,6 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
                     child: TextButton(
                   onPressed: () {
                     signInParent();
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   },
                   child: const Text(
                     "PARENT",
@@ -123,7 +117,7 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
             ),
             const SizedBox(height: 12),
 
-            // staff
+            // Teacher sign in button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
               child: Container(
@@ -138,7 +132,7 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
                     signInTeacher();
                   },
                   child: const Text(
-                    "STAFF",
+                    "TEACHER",
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -154,30 +148,43 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
     );
   }
 
+  // Signs in student by first checking whether the Google account is verified
+  // Secondary verification occurs by checking if the email matches the 'apps.nsd.org' extension.
+  // This extension is common to all NCHS students.
   Future signInStudent() async {
     var user = await GoogleSignInApi.login();
 
     if (user != null && user.email.contains('apps.nsd.org')) {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => StudentTab(user: user)));
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => StudentTab(
+                user: user,
+                selectedIndex: 0,
+              )));
     }
   }
 
+  // Signs in parent by checking whether the Google account is verified.
   Future signInParent() async {
     final user = await GoogleSignInApi.login();
 
     if (user != null) {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => ParentTab(user: user)));
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => ParentTab(user: user, selectedIndex: 0)));
     }
   }
 
+  // Signs in teacher by checking whether the Google account is verfied.
+  // Secondary verification occurs by checking if the email contains the 'nsd.org' extension.
+  // This extension common to all NCHS teachers.
   Future signInTeacher() async {
     final user = await GoogleSignInApi.login();
 
     if (user != null || user!.email.contains('nsd.org')) {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => TeacherTab(user: user)));
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => TeacherTab(
+                user: user,
+                selectedIndex: 0,
+              )));
     }
   }
 }
