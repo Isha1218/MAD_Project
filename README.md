@@ -33,7 +33,9 @@ We have used [Flutter](https://flutter.dev/?gclid=CjwKCAiAwc-dBhA7EiwAxPRylOL06v
 * **View Licensing & Terms of Use:** Users can view our licensing & terms of use, so that they are aware of all of the policies associated with our app.
 * **Help:** Users can navigate to the help page if they need any help understanding how to access certain elements of the app. 
 * **Icons:** Various icons are used throughout the app to ensure that the user is able to easily navigate between the pages and understand what each page does.
+* **Text Messaging:** Students can directly message with their class teachers and club advisers. This provides convenient, efficient communication between an individual students and teacher.
 * **Photo Messaging:** Students and teachers are able to send photos to each other through our messaging page. This ensures that teachers can be fully involved in the students' learning process.
+* **Announcements:** Teachers can send text-announcements to entire class periods, ensuring that teachers can easily alert large group of students of important information, such as deadlines or assignments. 
 * **Reporting Absences:** As many parents know, reporting their students' absences can be quite tedious. VERTEX ensures that this process is simple.
 
 # Instructions
@@ -47,7 +49,7 @@ We have used [Flutter](https://flutter.dev/?gclid=CjwKCAiAwc-dBhA7EiwAxPRylOL06v
     * Purple: School Events
     * Pink: Sports Events
     * Yellow: Club Events
-  * **Messaging:** Students can message their teachers. They will be able to upload photos and write text messages to get help on any items they need. Teachers that students students only have class with are available to message.
+  * **Messaging:** Students can message their teachers. They will be able to upload photos and write text messages to get help on any items they need. Students can only message the teachers that are advisers for clubs they are in or teach the classes they are in.
 
 ### Teachers
   * **Sign-In:** Teachers will be expected to sign-in using their nsd.org emails.
@@ -57,6 +59,7 @@ We have used [Flutter](https://flutter.dev/?gclid=CjwKCAiAwc-dBhA7EiwAxPRylOL06v
   * **Calendar Page:** Teachers can navigate to the calendar page with a calendar icon. They will be able to view all of their upcoming events that they are a part of. The events will be similarly displayed to the student page. One additional feature will be accessible to teachers at the top of the Calendar page by clicking on the addition icon: the ability to request events.
     * Request events: Teachers will be able to request an event by inputting a subject, dscription, and time that the event will occur. The event will be reviewed and added into the database within a few hours.
   * **Messaging:** Teachers can message their students. They will have access to all of the features that come with messaging (e.g.g photo uploading) that students have.
+  * **Announcements:** Teachers can also message all the students in a class period or club at once by sending an announcement, allowing them to easily update groups of students. 
 
 ### Parents
   * **Sign-In:** Parents will be expected to sign-in with their gmails.
