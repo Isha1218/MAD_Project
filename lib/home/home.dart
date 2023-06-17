@@ -133,10 +133,12 @@ class _HomeState extends State<Home> {
           bool unread = false;
           await db.collection('conversations').get().then((value) => {
                 value.docs.forEach((element) {
-                  if (element.id.contains(clubRef) &&
-                      element.data()['studentUnreadMessages'] > 0 && element.id.contains(widget.user.displayName!
-                              .replaceAll(' ', '_')
-                              .toLowerCase())) {
+                  if (element.id.contains(docStr) &&
+                      element.data()['studentUnreadMessages'] > 0 &&
+                      element.id.contains(widget.user.displayName!
+                          .replaceAll(' ', '_')
+                          .toLowerCase())) {
+                    print('there is an unread message');
                     unread = true;
                   }
                 })
