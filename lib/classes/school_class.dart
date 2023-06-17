@@ -9,10 +9,12 @@ class SchoolClass extends Item {
   late String teacher;
   late Icon icon;
   late int period;
+  late bool unread;
 
-  SchoolClass(String name, Icon icon, int period, String teacher)
+  SchoolClass(String name, Icon icon, int period, String teacher, bool unread)
       : super(name, icon) {
     this.period = period;
     this.teacher = teacher;
+    this.unread = unread;
   }
 }

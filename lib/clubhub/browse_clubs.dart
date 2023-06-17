@@ -445,7 +445,6 @@ class _BrowseClubsState extends State<BrowseClubs> {
             color: index == selectedIndex && !isSearch
                 ? Color(0xff4C2C72)
                 : Colors.white,
-            //color: Color(0xff4C2C72),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -485,7 +484,6 @@ class _BrowseClubsState extends State<BrowseClubs> {
           isSearch = false;
           myfocus.unfocus();
           controller.clear();
-          // controller.text = '';
         });
       },
     );
@@ -495,42 +493,40 @@ class _BrowseClubsState extends State<BrowseClubs> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xff78CAD2),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 80,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 60, 0, 0),
-            child: Text(
-              'Browse Clubs',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 30,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 80,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 60, 0, 0),
+              child: Text(
+                'Browse Clubs',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 30,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Container(
-              child: displaySearchBar(),
-            ),
-          ),
-          Expanded(
-              child: SizedBox.expand(
-                  child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: new BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height * 0.9,
+            Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Container(
+                child: displaySearchBar(),
               ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height * 0.6),
               child: Container(
                 decoration: BoxDecoration(
                   color: Color(0xffF7F7F7),
                   borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40)),
+                    topLeft: Radius.circular(40),
+                    topRight: Radius.circular(40),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,9 +536,10 @@ class _BrowseClubsState extends State<BrowseClubs> {
                       child: Text(
                         'Categories',
                         style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18),
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                     Padding(
@@ -552,44 +549,52 @@ class _BrowseClubsState extends State<BrowseClubs> {
                         child: Row(
                           children: [
                             buildCategory(
-                                'Popular', Icon(Icons.star_outline), 0),
-                            SizedBox(
-                              width: 5,
+                              'Popular',
+                              Icon(Icons.star_outline),
+                              0,
                             ),
-                            buildCategory('Business',
-                                Icon(Icons.monetization_on_outlined), 1),
-                            SizedBox(
-                              width: 5,
-                            ),
+                            SizedBox(width: 5),
                             buildCategory(
-                                'Technology', Icon(Icons.computer_outlined), 2),
-                            SizedBox(
-                              width: 5,
+                              'Business',
+                              Icon(Icons.monetization_on_outlined),
+                              1,
                             ),
-                            buildCategory('Art', Icon(Icons.brush_outlined), 3),
-                            SizedBox(
-                              width: 5,
-                            ),
+                            SizedBox(width: 5),
                             buildCategory(
-                                'Culture', Icon(Icons.diversity_2_outlined), 4),
-                            SizedBox(
-                              width: 5,
+                              'Technology',
+                              Icon(Icons.computer_outlined),
+                              2,
                             ),
+                            SizedBox(width: 5),
                             buildCategory(
-                                'Sports', Icon(Icons.sports_football), 5)
+                              'Art',
+                              Icon(Icons.brush_outlined),
+                              3,
+                            ),
+                            SizedBox(width: 5),
+                            buildCategory(
+                              'Culture',
+                              Icon(Icons.diversity_2_outlined),
+                              4,
+                            ),
+                            SizedBox(width: 5),
+                            buildCategory(
+                              'Sports',
+                              Icon(Icons.sports_football),
+                              5,
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    SizedBox(
-                      height: 20,
-                    ),
+                    SizedBox(height: 20),
                     LayoutBuilder(builder: (context, constraints) {
                       if (isSearch) {
                         return Column(
-                            children: List.generate(activites.length, (index) {
-                          return buildClubCard(activites[index], index);
-                        }));
+                          children: List.generate(activites.length, (index) {
+                            return buildClubCard(activites[index], index);
+                          }),
+                        );
                       } else {
                         List<Activity> displayList = [];
                         if (selectedIndex == 0) {
@@ -606,18 +611,18 @@ class _BrowseClubsState extends State<BrowseClubs> {
                           displayList = sportsActivites;
                         }
                         return Column(
-                            children:
-                                List.generate(displayList.length, (index) {
-                          return buildClubCard(displayList[index], index);
-                        }));
+                          children: List.generate(displayList.length, (index) {
+                            return buildClubCard(displayList[index], index);
+                          }),
+                        );
                       }
                     }),
                   ],
                 ),
               ),
             ),
-          )))
-        ],
+          ],
+        ),
       ),
     );
   }

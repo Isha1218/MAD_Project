@@ -28,18 +28,14 @@ class _BookkeeperItemInfoState extends State<BookkeeperItemInfo> {
                   minHeight: MediaQuery.of(context).size.height * 1),
               child: Column(
                 children: [
-                  // Displays te image of the bookkeeper item at the top of the screen.
+                  // Displays the image of the bookkeeper item at the top of the screen.
                   Container(
                     height: MediaQuery.of(context).size.height * 0.6,
                     width: double.infinity,
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(40),
                         image: DecorationImage(
-                            image: AssetImage('images/' +
-                                widget.item.name
-                                    .replaceAll(' ', '_')
-                                    .toLowerCase() +
-                                '.jpg'),
+                            image: widget.item.image.image,
                             fit: BoxFit.cover),
                         boxShadow: [
                           BoxShadow(

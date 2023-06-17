@@ -70,7 +70,7 @@ class IconTags {
     } else if (this.tag == "Culture") {
       return Icon(
         Icons.diversity_2,
-        color: Colors.white,
+        color: top ? Colors.white : Color.fromARGB(255, 99, 57, 151),
         size: top ? 50 : 30,
       );
     } else {

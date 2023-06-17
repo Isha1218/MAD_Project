@@ -1,8 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mad/bookkeeper/bookkeeper_item_info.dart';
+import 'package:mad/bookkeeper/student_purchases.dart';
 import 'package:mad/classes/bookkeeper_item.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../classes/bookeeper_item_history.dart';
 
 // This widget will display all of the bookkeeper items at NCHS
 // in a grid format.
@@ -20,11 +25,14 @@ class _BookkeeperPageState extends State<BookkeeperPage> {
   @override
   void initState() {
     getBookkeeperItems();
+    getPurchasedItems();
     super.initState();
   }
 
   // This list will keep track of all bookkeeper items taken from Firebase.
   List<BookkeeperItem> bookkeeperItems = [];
+
+  List<BookkeeperItemHistory> bookeeperPurchasedItems = [];
 
   // This controller will function as a search bar to query for items.
   TextEditingController controller = TextEditingController();
@@ -44,40 +52,94 @@ class _BookkeeperPageState extends State<BookkeeperPage> {
                 String cost = element.data()['cost'];
                 String description = element.data()['description'];
 
+                var ref = FirebaseStorage.instance.ref().child(
+                    "bookkeeper_images/" +
+                        name.toLowerCase().replaceAll(' ', '_') +
+                        ".jpg");
+                String url = (await ref.getDownloadURL()).toString();
+
                 setState(() {
                   bookkeeperItems.add(BookkeeperItem(
-                      cost: cost, name: name, description: description));
+                      cost: cost,
+                      name: name,
+                      description: description,
+                      image: Image.network(
+                        url,
+                        cacheHeight: (MediaQuery.of(context).size.height *
+                                0.22 *
+                                MediaQuery.of(context).devicePixelRatio)
+                            .round(),
+                        fit: BoxFit.cover,
+                      )));
                 });
               })
             });
   }
 
+  Future<void> getPurchasedItems() async {
+    FirebaseFirestore.instance
+        .collection('students')
+        .doc(widget.user.displayName!.toLowerCase().replaceAll(' ', '_'))
+        .collection('purchases')
+        .orderBy('datePurchased')
+        .get()
+        .then((value) {
+      value.docs.forEach((element) async {
+        var ref = FirebaseStorage.instance.ref().child("bookkeeper_images/" +
+            element.data()['name'].toLowerCase().replaceAll(' ', '_') +
+            ".jpg");
+        String url = (await ref.getDownloadURL()).toString();
+        BookkeeperItemHistory item = BookkeeperItemHistory(
+            cost: element.data()['cost'],
+            name: element.data()['name'],
+            time: DateFormat('MMM dd, yyyy')
+                .format(element.data()['datePurchased'].toDate()),
+            image: Image.network(
+              url,
+              cacheHeight: 60,
+              fit: BoxFit.cover,
+            ));
+
+        setState(() {
+          bookeeperPurchasedItems.add(item);
+        });
+      });
+    });
+  }
+
   // This function will return the search bar widget, which will be formed by a text field.
   Widget displaySearchBar() {
-    return TextField(
-      // Has a done button to exit out of the search bar.
-      textInputAction: TextInputAction.done,
-      focusNode: myfocus,
-      controller: controller,
-      decoration: InputDecoration(
-          prefixIcon: Icon(Icons.search),
-          hintText: 'Search for items...',
-          filled: true,
-          iconColor: Color(0xff78CAD2),
-          fillColor: Color(0xffF7F7F7),
-          enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.white),
-              borderRadius: BorderRadius.all(
-                Radius.circular(20),
-              )),
-          focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.white),
-              borderRadius: BorderRadius.all(
-                Radius.circular(20),
-              ))),
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.7,
+      height: 50,
+      child: TextField(
+        // Has a done button to exit out of the search bar.
+        textInputAction: TextInputAction.done,
+        focusNode: myfocus,
+        controller: controller,
+        decoration: InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            prefixIconColor: Colors.grey,
+            hintText: 'Search for items...',
+            hintStyle: TextStyle(
+              color: Colors.grey,
+            ),
+            filled: true,
+            fillColor: Color(0xfff6f8fa),
+            enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xfff6f8fa)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(10),
+                )),
+            focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xfff6f8fa)),
+                borderRadius: BorderRadius.all(
+                  Radius.circular(10),
+                ))),
 
-      // Filters results when query has changed.
-      onChanged: searchActivity,
+        // Filters results when query has changed.
+        onChanged: searchActivity,
+      ),
     );
   }
 
@@ -102,161 +164,155 @@ class _BookkeeperPageState extends State<BookkeeperPage> {
     }
   }
 
-  // This function will return a widget that will display each individual bookkeeper item.
-  // Each item will have an image and the cost and name of the item below the image.
-  Widget buildItemCard(BookkeeperItem item) {
-    return TextButton(
-      onPressed: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => BookkeeperItemInfo(
-                      item: item,
-                      user: widget.user,
-                    )));
-      },
-      child: Column(
-        children: [
-          Container(
-            height: MediaQuery.of(context).size.height * 0.27,
-            width: MediaQuery.of(context).size.width * 0.45,
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.grey.shade200,
-                      spreadRadius: 3,
-                      blurRadius: 5,
-                      offset: Offset(0, 5))
-                ]),
-
-            // Image
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.19,
-                        width: MediaQuery.of(context).size.width * 0.43,
-                        child: Image.asset(
-                          "images/" +
-                              item.name.replaceAll(' ', '_').toLowerCase() +
-                              ".jpg",
-                          fit: BoxFit.cover,
-                        ),
-                      )),
-                  SizedBox(
-                    height: 10,
-                  ),
-
-                  // Cost and name
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      item.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      '\$' + item.cost,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // This will build the entire screen by presenting all of the necessary widgets.
   // The search bar will be at the top and the grid items will be below that.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xff78CAD2),
-      body: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-            height: 50,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 0, 0, 0),
-            child: Text(
-              'All Items',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 30,
+  backgroundColor: Colors.white,
+  body: SafeArea(
+    child: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                displaySearchBar(),
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Color(0xfff6f8fa),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (context) {
+                          return StudentPurchases(
+                            studentId: widget.user.displayName!
+                                .replaceAll(' ', '_')
+                                .toLowerCase(),
+                          );
+                        },
+                      );
+                    },
+                    icon: Icon(Icons.history),
+                  ),
+                )
+              ],
+            ),
+            SizedBox(height: 20),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Color(0xff78CAD2).withOpacity(0.6),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 10, 20, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Image.asset(
+                      'images/money_bookkeeper.png',
+                      fit: BoxFit.cover,
+                      height: MediaQuery.of(context).size.height * 0.15,
+                    ),
+                    Text(
+                      'Pay Fines\nAt School',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-
-          // Search bar at top.
-          Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Container(
-              child: displaySearchBar(),
-            ),
-          ),
-          Expanded(
-              child: SizedBox.expand(
-                  child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                          constraints: new BoxConstraints(
-                            minHeight: MediaQuery.of(context).size.height * 1,
+            SizedBox(height: 20),
+            MasonryGridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: bookkeeperItems.length,
+              gridDelegate:
+                        SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2),
+              itemBuilder: (context, index) => Padding(
+                padding: index == 1
+                    ? EdgeInsets.fromLTRB(8, 35, 8, 8)
+                    : EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookkeeperItemInfo(
+                              item: bookkeeperItems[index],
+                              user: widget.user,
+                            ),
                           ),
-                          child: Container(
-                              decoration: BoxDecoration(
-                                color: Color(0xffF7F7F7),
-                                borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(40),
-                                    topRight: Radius.circular(40)),
-                              ),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          32, 20, 32, 32),
-
-                                      // Displays items in a grid (2 columns and unlimited rows).
-                                      child: GridView.builder(
-                                        shrinkWrap: true,
-                                        physics: NeverScrollableScrollPhysics(),
-                                        gridDelegate:
-                                            SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 2,
-                                          crossAxisSpacing: 2,
-                                          mainAxisSpacing: 4,
-                                          mainAxisExtent: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.3,
-                                        ),
-                                        itemCount: bookkeeperItems.length,
-                                        itemBuilder: (context, index) {
-                                          return buildItemCard(
-                                              bookkeeperItems[index]);
-                                        },
-                                      ),
-                                    ),
-                                  ]))))))
-        ]),
+                        );
+                      },
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.22,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: bookkeeperItems[index].image.image,
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              Colors.black.withOpacity(0.2),
+                              BlendMode.darken,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        bookkeeperItems[index].name,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        '\$' + bookkeeperItems[index].cost,
+                        style: TextStyle(
+                          color: Color(0xff78CAD2),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    );
+    ),
+  ),
+);
+
   }
 }

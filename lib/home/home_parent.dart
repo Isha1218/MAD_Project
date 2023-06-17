@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_swiper/flutter_swiper.dart';
@@ -9,6 +8,7 @@ import 'package:mad/home/studentAbsences.dart';
 import 'package:mad/tabs/parent_tab.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../bookkeeper/student_purchases.dart';
 import '../classes/child.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -211,12 +211,12 @@ class _HomeParentState extends State<HomeParent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                      child: Text(
-                        'Welcome back',
-                        style: TextStyle(color: Colors.grey[500]),
-                      ),
-                    ),
+                        padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                        child: Text(
+                          'Welcome back',
+                          style: TextStyle(color: Colors.grey[500]),
+                        )
+                        ),
                     SizedBox(
                       height: 5,
                     ),
@@ -423,7 +423,7 @@ class _HomeParentState extends State<HomeParent> {
                                                 backgroundColor: Color.fromARGB(
                                                     255, 251, 207, 74),
                                                 icon: Icons.report,
-                                                label: 'Report Absence',
+                                                label: 'Absence',
                                                 onPressed: (context) =>
                                                     Navigator.of(context).push(
                                                         MaterialPageRoute(
@@ -437,6 +437,38 @@ class _HomeParentState extends State<HomeParent> {
                                                                       .user,
                                                                 ))),
                                               ),
+                                              SlidableAction(
+                                                foregroundColor: Colors.white,
+                                                backgroundColor:
+                                                    Color(0xffD56AA0),
+                                                icon: Icons.monetization_on,
+                                                label: 'Fines',
+                                                onPressed: (context) {
+                                                  String childId =
+                                                      (childrenList[index]
+                                                                  .name +
+                                                              ' ' +
+                                                              childrenList[
+                                                                      index]
+                                                                  .lastName)
+                                                          .toLowerCase()
+                                                          .replaceAll(' ', '_');
+
+                                                  showModalBottomSheet(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          40)),
+                                                      context: context,
+                                                      isScrollControlled: true,
+                                                      builder: (context) {
+                                                        return StudentPurchases(
+                                                            studentId: childId);
+                                                      });
+                                                },
+                                              )
                                             ],
                                           ),
                                           child: buildChildren(

@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../tabs/parent_tab.dart';
 import '../tabs/student_tab.dart';
 import '../tabs/teacher_tab.dart';
@@ -154,22 +156,57 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
   Future signInStudent() async {
     var user = await GoogleSignInApi.login();
 
-    if (user != null && user.email.contains('apps.nsd.org')) {
+    var studentSnapshot = await FirebaseFirestore.instance
+        .collection('students')
+        .doc(user!.displayName!.replaceAll(' ', '_').toLowerCase())
+        .get();
+
+    if (studentSnapshot.exists && studentSnapshot['email'] == user.email) {
       Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => StudentTab(
-                user: user,
-                selectedIndex: 0,
-              )));
+          builder: (context) => StudentTab(user: user, selectedIndex: 0)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.black,
+        content: Center(
+            child: Text(
+          'No such user!',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        )),
+      ));
+      GoogleSignInApi.logout();
     }
   }
 
   // Signs in parent by checking whether the Google account is verified.
   Future signInParent() async {
-    final user = await GoogleSignInApi.login();
+    var user = await GoogleSignInApi.login();
 
-    if (user != null) {
+    var parentSnapshot = await FirebaseFirestore.instance
+        .collection('parents')
+        .doc(user!.displayName!.replaceAll(' ', '_').toLowerCase())
+        .get();
+
+    if (parentSnapshot.exists && parentSnapshot['email'] == user.email) {
       Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => ParentTab(user: user, selectedIndex: 0)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.black,
+        content: Center(
+            child: Text(
+          'No such user!',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        )),
+      ));
+      GoogleSignInApi.logout();
     }
   }
 
@@ -179,12 +216,28 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
   Future signInTeacher() async {
     final user = await GoogleSignInApi.login();
 
-    if (user != null || user!.email.contains('nsd.org')) {
+    var teacherSnapshot = await FirebaseFirestore.instance
+        .collection('teachers')
+        .doc(user!.displayName!.replaceAll(' ', '_').toLowerCase())
+        .get();
+
+    if (teacherSnapshot.exists && teacherSnapshot['email'] == user.email) {
       Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => TeacherTab(
-                user: user,
-                selectedIndex: 0,
-              )));
+          builder: (context) => TeacherTab(user: user, selectedIndex: 0)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.black,
+        content: Center(
+            child: Text(
+          'No such user!',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        )),
+      ));
+      GoogleSignInApi.logout();
     }
   }
 }

@@ -1,10 +1,14 @@
 import "package:chat_bubbles/chat_bubbles.dart";
 import 'package:flutter/material.dart';
 import "package:cloud_firestore/cloud_firestore.dart";
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mad/messaging/teacher_class_messages.dart';
+import 'package:mad/tabs/teacher_tab.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 
 // Initializes Firebase database
 var db = FirebaseFirestore.instance;
@@ -18,12 +22,14 @@ class TeacherMessagesPage extends StatefulWidget {
     required this.teacher,
     required this.studentID,
     required this.isClass,
+    required this.user,
   }) : super(key: key);
 
   final String className;
   final String teacher;
   final String studentID;
   final bool isClass;
+  final GoogleSignInAccount user;
 
   @override
   State<TeacherMessagesPage> createState() => _TeacherMessagesPageState();
@@ -113,21 +119,30 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
       alignment: Alignment.bottomCenter,
       child: Container(
         child: Material(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40), topRight: Radius.circular(40))),
+          elevation: 60,
+          shadowColor: Colors.grey,
+          color: Colors.white,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(0, 10, 0, 32),
+            padding: const EdgeInsets.fromLTRB(0, 15, 0, 32),
             child: Row(children: [
               LayoutBuilder(builder: (context, constraints) {
-                // When the user is not picking an image, the add button will show.
+                // If user has not selected photo, the add button will be present
                 if (!isPhoto) {
                   return IconButton(
-                    icon: Icon(Icons.add),
+                    icon: Icon(
+                      Icons.add,
+                      color: Colors.grey,
+                    ),
 
-                    // Permission is asked to access the user's images.
+                    // The user will need to give permission to access images
                     onPressed: () {
                       () async {
                         var _permissionStatus = await Permission.storage.status;
 
-                        // Should allow user to grant permission to image gallery
+                        //should allow user to grant permission to image gallery
                         if (_permissionStatus != PermissionStatus.granted) {
                           PermissionStatus permissionStatus =
                               await Permission.storage.request();
@@ -139,9 +154,9 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                       uploadImage();
                     },
                   );
+
+                  // Otherwise, there will be a close icon to remove the image
                 } else {
-                  // When the user is picking an image, the close icon will show, so that the
-                  // user can remove the image.
                   return IconButton(
                     onPressed: () {
                       setState(() {
@@ -154,8 +169,9 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
               }),
               Expanded(
                 child: LayoutBuilder(builder: (context, constraints) {
+                  // If the user has not selected a photo, a text field will show for the user to type
+                  // as message.
                   if (!isPhoto) {
-                    // A text field will show up if the user has not selected an image.
                     return TextFormField(
                       textInputAction: TextInputAction.done,
                       maxLines: null,
@@ -166,28 +182,22 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                           hintText: 'Enter message here...',
                           border: InputBorder.none,
                           filled: true,
-                          fillColor: detailFocusColor,
+                          fillColor: Color(0xffF7F7F7),
                           enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Color(0xff78CAD2)),
+                              borderSide: BorderSide(color: Colors.white),
                               borderRadius: BorderRadius.all(
-                                Radius.circular(20),
+                                Radius.circular(40),
                               )),
                           focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Color(0xff78CAD2)),
+                              borderSide: BorderSide(color: Colors.white),
                               borderRadius: BorderRadius.all(
-                                Radius.circular(20),
+                                Radius.circular(40),
                               ))),
-                      onChanged: (value) => setState(() {
-                        if (!value.isEmpty) {
-                          detailFocusColor = Color(0xff78CAD2).withOpacity(0.3);
-                        } else {
-                          detailFocusColor = Colors.transparent;
-                        }
-                      }),
                     );
+
+                    // If the user has selected an image, the image will show in a container and the text field
+                    // won't show up.
                   } else {
-                    // If the user has selected an image, a preview of the image will show in
-                    // a container without the text field.
                     return Container(
                       height: MediaQuery.of(context).size.height * 0.1,
                       width: MediaQuery.of(context).size.width * 0.5,
@@ -198,10 +208,15 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                   }
                 }),
               ),
-              IconButton(
-                  icon: Icon(Icons.send),
+              SizedBox(width: 10),
+
+              // When the send button is clicked, either the message or the image will be
+              // added to Firebase and Firebase Storage and show up in the display.
+              FloatingActionButton(
+                  elevation: 0,
+                  backgroundColor: Color(0xff78CAD2),
+                  child: Icon(Icons.send, size: 20),
                   onPressed: () {
-                    // The message or image will send when the send icon is pressed.
                     if (!isPhoto) {
                       String message = _textController.text;
                       print('message: ' + message);
@@ -210,27 +225,23 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                       loadMessages();
                     } else {
                       print('in photo');
-                      // sendImage();
+                      //send an image!
+                      //sendImage();
                       setImageData();
                       setState(() {
                         isPhoto = false;
                       });
                     }
-                  })
+                  }),
+              SizedBox(
+                width: 10,
+              )
             ]),
           ),
         ),
       ),
     );
   }
-
-  // Widget sendImage() {
-  //   return BubbleNormalImage(
-  //     id: '',
-  //     image: Image.network(imageUrl),
-  //     isSender: true,
-  //   );
-  // }
 
   Future<void> setImageData() async {
     //store in corressponding document
@@ -250,6 +261,25 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     };
 
     imageMessageRef.add(data);
+    // get the original number of undread messages and add 1
+    var messageSnapshot = await db
+        .collection('conversations')
+        .doc(widget.teacher + widget.studentID + widget.className)
+        .get();
+    int messages = 0;
+    if (messageSnapshot.exists) {
+      messages = messageSnapshot['studentUnreadMessages'];
+    }
+
+    db
+        .collection('conversations')
+        .doc(widget.teacher + widget.studentID + widget.className)
+        .set({
+      'lastMessage': 'Photo sent',
+      'studentUnreadMessages': messages + 1,
+      'teacherUnreadMessages': 0,
+      'lastMessageDate': DateTime.now(),
+    });
   }
 
   // This function calls an image picker to choose an image from user gallery
@@ -321,107 +351,211 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
         });
   }
 
+  String getMessageSentString(DateTime messageSent) {
+    String messageSentString = '';
+    if (messageSent.difference(DateTime.now()).inDays == 0) {
+      messageSentString = DateFormat('hh:mm a').format(messageSent);
+    } else if (messageSent.difference(DateTime.now()).inDays < 7) {
+      messageSentString = DateFormat('EEE, hh:mm a').format(messageSent);
+    } else {
+      messageSentString = DateFormat('M/d/y').format(messageSent);
+    }
+    return messageSentString;
+  }
+
   // This will build invididual message bubble using the Chat Bubbles package
   Widget buildItem(QueryDocumentSnapshot<Map<String, dynamic>>? document) {
-    print('is in build item' + (document?.get('isImage') ? 'image' : 'text'));
+    DateTime messageSent = document?.get('timeSent').toDate();
+    String messageSentString = getMessageSentString(messageSent);
     if (document?.get('isImage')) {
       print('is image');
       if (document?.get('sender') == widget.teacher) {
-        return BubbleNormalImage(
-            color: Colors.transparent,
-            id: '',
-            isSender: true,
-            image: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-              child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(0)),
-                  child: Image.network(document?.get('content'))),
-            ));
+        final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              BubbleNormalImage(
+                  color: Colors.transparent,
+                  id: '',
+                  isSender: true,
+                  image: ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                        bottomLeft: Radius.circular(12),
+                      ),
+                      child: Image.network(document?.get('content'),
+                          cacheHeight: (MediaQuery.of(context).size.height *
+                                  devicePixelRatio)
+                              .round()))),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  messageSentString,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              )
+            ],
+          ),
+        );
       } else {
-        return BubbleNormalImage(
-            color: Colors.transparent,
-            id: "",
-            isSender: false,
-            image: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(0),
-                      bottomRight: Radius.circular(20)),
-                  child: Image.network(document?.get('content'))),
-            ));
+        final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BubbleNormalImage(
+                  color: Colors.transparent,
+                  id: "",
+                  isSender: false,
+                  image: ClipRRect(
+                      borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                          bottomLeft: Radius.circular(0),
+                          bottomRight: Radius.circular(12)),
+                      child: Image.network(document?.get('content'),
+                          fit: BoxFit.cover,
+                          cacheHeight: (MediaQuery.of(context).size.height *
+                                  devicePixelRatio)
+                              .round()))),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: Text(
+                  messageSentString,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              )
+            ],
+          ),
+        );
       }
     } else {
       print('sending');
       if (document?.get('sender') == widget.teacher) {
         if (document?.get('announcement')) {
-          print('sending 2');
           return Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            padding: const EdgeInsets.only(bottom: 24, top: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 15),
-                  child: Text(
-                    'ANNOUNCEMENT',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: Colors.grey),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      BubbleNormal(
+                          bubbleRadius: 12,
+                          textStyle: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
+                          text: document?.get('content'),
+                          color: Color.fromRGBO(120, 202, 210, 1),
+                          tail: true,
+                          isSender: true),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16, top: 4),
+                        child: Text(
+                          messageSentString,
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    ],
                   ),
                 ),
-                BubbleNormal(
-                    textStyle: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: 8),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xffF7F7F7),
+                    child: Icon(
+                      Icons.announcement,
+                      color: Colors.black54,
+                      size: 20,
                     ),
-                    text: document?.get('content'),
-                    color: Color.fromRGBO(120, 202, 210, 1),
-                    tail: true,
-                    isSender: true),
+                  ),
+                ),
               ],
             ),
           );
         } else {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: BubbleNormal(
-                textStyle: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
-                text: document?.get('content'),
-                color: Color.fromRGBO(120, 202, 210, 1),
-                tail: true,
-                isSender: true),
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                BubbleNormal(
+                    textStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                    ),
+                    bubbleRadius: 12,
+                    text: document?.get('content'),
+                    color: Color.fromRGBO(120, 202, 210, 1),
+                    tail: true,
+                    isSender: true),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 4),
+                  child: Text(
+                    messageSentString,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                )
+              ],
+            ),
           );
         }
       } else {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 7),
-          child: BubbleNormal(
-              textStyle: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-              ),
-              text: document?.get('content'),
-              color: Color.fromARGB(255, 251, 145, 198),
-              tail: true,
-              isSender: false),
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BubbleNormal(
+                  bubbleRadius: 12,
+                  textStyle: TextStyle(
+                    color: Colors.black.withOpacity(0.75),
+                    fontSize: 18,
+                  ),
+                  text: document?.get('content'),
+                  color: Color(0xffF7F7F7),
+                  tail: true,
+                  isSender: false),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: Text(
+                  messageSentString,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              )
+            ],
+          ),
         );
       }
     }
   }
 
   // Handle sending messages including images
-  void sendMessage(String content) {
+  void sendMessage(String content) async {
     final data;
     data = {
       'className': widget.className,
@@ -440,24 +574,31 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
         .doc();
 
     if (_textController.text != '') {
+      var messageSnapshot = await db
+          .collection('conversations')
+          .doc(widget.teacher + widget.studentID + widget.className)
+          .get();
+      int messages = 0;
+      if (messageSnapshot.exists &&
+          messageSnapshot.data()!.containsKey('studentUnreadMessages')) {
+        messages = messageSnapshot['studentUnreadMessages'];
+      }
       ref.set(data);
+      db
+          .collection('conversations')
+          .doc(widget.teacher + widget.studentID + widget.className)
+          .set({
+        'lastMessage': content,
+        'studentUnreadMessages': messages + 1,
+        'teacherUnreadMessages': 0,
+        'lastMessageDate': DateTime.now(),
+      });
       _scrollController.animateTo(_scrollController.position.maxScrollExtent,
           duration: Duration(milliseconds: 300), curve: Curves.easeOut);
     }
-
     setState(() {
       detailFocusColor = Colors.transparent;
     });
-
-    // return Text(
-    //   data['content'],
-    //   style: TextStyle(color: Colors.black),
-    // );
-    // return BubbleNormal(
-    //     text: data['content'],
-    //     isSender: true,
-    //     color: Color.fromRGBO(120, 202, 210, 1),
-    //     tail: true);
   }
 
   // This will display the messages and images in addition to the text field at the bottom.
@@ -466,37 +607,100 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     return Scaffold(
         appBar: AppBar(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           toolbarHeight: 100,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.white),
-          backgroundColor: Color(0xff78CAD2),
-          title: Column(
+          elevation: 15,
+          shadowColor: Color(0xffFEFEFE),
+          leading: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: Colors.grey),
+              onPressed: () async {
+                var conversationSnapshot = await db
+                    .collection('conversations')
+                    .doc(widget.teacher + widget.studentID + widget.className)
+                    .get();
+                if (conversationSnapshot.exists) {
+                  db
+                      .collection('conversations')
+                      .doc(widget.teacher + widget.studentID + widget.className)
+                      .set({
+                    'lastMessage': conversationSnapshot.data()!['lastMessage'],
+                    'lastMessageDate':
+                        conversationSnapshot.data()!['lastMessageDate'],
+                    'studentUnreadMessages':
+                        conversationSnapshot.data()!['studentUnreadMessages'],
+                    'teacherUnreadMessages': 0,
+                  });
+                }
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ListingsPage(className: widget.className, teacher: widget.teacher, isClass: widget.isClass, user: widget.user)));
+              },
+            ),
+          ),
+          backgroundColor: Colors.white,
+          title: Row(
             children: [
-              Text(
-                widget.isClass
-                    ? schoolClassName + ' (P' + period.toString() + ')'
-                    : schoolClassName,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 25,
+              CircleAvatar(
+                backgroundColor: Colors.grey.shade200,
+                radius: 25,
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  radius: 23,
+                  child: Text(
+                    widget.studentID
+                            .split('_')[0]
+                            .substring(0, 1)
+                            .toUpperCase() +
+                        widget.studentID
+                            .split('_')[1]
+                            .substring(0, 1)
+                            .toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(
-                height: 10,
+                width: 20,
               ),
-              Text(
-                studentName,
-                style: TextStyle(
-                  color: Color(0xffF7F7F7),
-                  fontSize: 18,
-                ),
-              )
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.55,
+                    child: Text(
+                      widget.isClass
+                          ? schoolClassName + ' (P' + period.toString() + ')'
+                          : schoolClassName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 5,
+                  ),
+                  Text(
+                    studentName,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  )
+                ],
+              ),
             ],
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xffFEFEFE),
         body: Stack(children: <Widget>[
           loadMessages(),
           buildInputBox(),

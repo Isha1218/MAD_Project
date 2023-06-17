@@ -205,7 +205,7 @@ class _CalendarTeacherState extends State<CalendarTeacher> {
                 // they are the adviser of by redirecting them to the Request Event page.
                 Positioned(
                   left: MediaQuery.of(context).size.width * 0.8,
-                  top: MediaQuery.of(context).size.height * 0.75,
+                  top: MediaQuery.of(context).size.height * 0.72,
                   child: Container(
                     height: 60,
                     width: 60,

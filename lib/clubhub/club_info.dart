@@ -355,19 +355,6 @@ class _ClubInfoState extends State<ClubInfo> {
                   children: [
                     TextButton(
                         onPressed: () async {
-                          // Navigator.of(context).push(MaterialPageRoute(
-                          //     builder: (BuildContext context) =>
-                          //         WebViewPage()));
-                          // final url = Uri.parse(
-                          //   'https://www.instagram.com/' +
-                          //       widget.activity.instagram,
-                          // );
-                          // if (await canLaunchUrl(url)) {
-                          //   launchUrl(url);
-                          // } else {
-                          //   // ignore: avoid_print
-                          //   print("Can't launch $url");
-                          // }
                           Navigator.of(context).push(MaterialPageRoute(
                               builder: (BuildContext context) =>
                                   Instagram(controller: controllerInstagram)));
@@ -421,6 +408,20 @@ class _ClubInfoState extends State<ClubInfo> {
                                           .replaceAll(' ', '_')
                                           .toLowerCase()
                                 });
+
+                                // Add student to activities collection, so they can message with teacher
+                                await FirebaseFirestore.instance
+                                    .collection('activities')
+                                    .doc(widget.activity.name
+                                        .replaceAll(' ', '_')
+                                        .toLowerCase())
+                                    .collection('students')
+                                    .doc(widget.user.displayName!
+                                        .replaceAll(' ', '_')
+                                        .toLowerCase())
+                                    .set({'name': widget.user.displayName});
+
+                                // Update members
                                 var activitySnapshot = await FirebaseFirestore
                                     .instance
                                     .collection('activities')

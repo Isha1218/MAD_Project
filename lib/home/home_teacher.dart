@@ -74,9 +74,18 @@ class _HomeTeacherState extends State<HomeTeacher> {
                 if (activitySnapshot.exists) {
                   String name = activitySnapshot.data()!['name'];
                   String tag = activitySnapshot.data()!['tags'].split(',')[0];
+                  bool unread = false;
+                  await db.collection('conversations').get().then((value) => {
+                        value.docs.forEach((element) {
+                          if (element.id.contains(clubRef) &&
+                              element.data()['teacherUnreadMessages'] > 0) {
+                            unread = true;
+                          }
+                        })
+                      });
                   setState(() {
-                    clubsList.add(
-                        Club(name, IconTags(tag, false).findIcon(), firstName));
+                    clubsList.add(Club(name, IconTags(tag, false).findIcon(),
+                        firstName, unread));
                   });
                 }
               })
@@ -203,15 +212,26 @@ class _HomeTeacherState extends State<HomeTeacher> {
                     .doc(classDocRef);
 
                 var docSnapshot = await activityCollection.get();
+                bool unread = false;
 
                 if (docSnapshot.exists) {
                   Map<String, dynamic>? data = docSnapshot.data();
-
+                  await db.collection('conversations').get().then((value) => {
+                        value.docs.forEach((element) {
+                          print(classDocRef);
+                          if (element.id.contains(classDocRef) &&
+                              element.data()['teacherUnreadMessages'] > 0) {
+                            unread = true;
+                            return;
+                          }
+                        })
+                      });
                   classList.add(SchoolClass(
                       data!['name'],
                       IconTags(data['type'], false).findIcon(),
                       data['period'],
-                      firstName));
+                      firstName,
+                      unread));
                 }
               })
             });
@@ -517,6 +537,7 @@ class _HomeTeacherState extends State<HomeTeacher> {
                                                                       ' ', '_')
                                                                   .toLowerCase(),
                                                               isClass: true,
+                                                              user: widget.user,
                                                             ),
                                                           ));
                                                     }),
@@ -562,6 +583,7 @@ class _HomeTeacherState extends State<HomeTeacher> {
                                                                       ' ', '_')
                                                                   .toLowerCase(),
                                                               isClass: false,
+                                                              user: widget.user,
                                                             ),
                                                           )),
                                                 ),
@@ -605,7 +627,21 @@ class _HomeTeacherState extends State<HomeTeacher> {
                   child: schoolClass.icon,
                 ),
               ),
-              trailing: Text('P' + schoolClass.period.toString()),
+              trailing: schoolClass.unread
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('P' + schoolClass.period.toString()),
+                        SizedBox(
+                          height: 2,
+                        ),
+                        CircleAvatar(
+                          backgroundColor: Color(0xff78CAD2),
+                          radius: 4,
+                        )
+                      ],
+                    )
+                  : Text('P' + schoolClass.period.toString()),
             ),
             Divider(
               indent: 20,
@@ -633,6 +669,12 @@ class _HomeTeacherState extends State<HomeTeacher> {
                   child: club.icon,
                 ),
               ),
+              trailing: club.unread
+                  ? CircleAvatar(
+                      backgroundColor: Color(0xff78CAD2),
+                      radius: 4,
+                    )
+                  : Text(''),
             ),
             Divider(
               indent: 20,

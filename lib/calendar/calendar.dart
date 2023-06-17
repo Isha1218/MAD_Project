@@ -218,7 +218,7 @@ class _CalendarState extends State<Calendar> {
                 // When clicked, the user will be redirected to a screen to add their own personal events.
                 Positioned(
                   left: MediaQuery.of(context).size.width * 0.8,
-                  top: MediaQuery.of(context).size.height * 0.75,
+                  top: MediaQuery.of(context).size.height * 0.72,
                   child: Container(
                     height: 60,
                     width: 60,

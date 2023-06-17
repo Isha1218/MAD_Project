@@ -7,8 +7,10 @@ class Club extends Item {
   late String name;
   late Icon icon;
   late String adviser;
+  late bool unread;
 
-  Club(super.name, super.icon, String adviser) {
+  Club(super.name, super.icon, String adviser, bool unread) {
     this.adviser = adviser;
+    this.unread = unread;
   }
 }

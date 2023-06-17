@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_swiper/flutter_swiper.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mad/classes/event.dart';
 import 'package:mad/classes/school_class.dart';
@@ -34,6 +37,8 @@ class _HomeState extends State<Home> {
     getClassesDocuments();
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   // This list will keep track of the user's events.
   late List<Event> events = [];
 
@@ -49,6 +54,8 @@ class _HomeState extends State<Home> {
   // This boolean will keep track of whether the student is looking at the classes or
   // events list.
   bool isClasses = true;
+
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   // This function will produce a draft of an email to a particular teacher.
   sendEmail(String recipientEmail) async {
@@ -73,6 +80,14 @@ class _HomeState extends State<Home> {
         firstName = userSnapshot.data()!['firstName'];
       });
     }
+  }
+
+  late NavigatorState _navigator;
+
+  @override
+  void didChangeDependencies() {
+    _navigator = Navigator.of(context);
+    super.didChangeDependencies();
   }
 
   // This function will get the clubs that the user is a part of and events of those clubs.
@@ -114,8 +129,20 @@ class _HomeState extends State<Home> {
 
           tag = data['tags'].split(",")[0];
           subject = data['name'];
-          clubList
-              .add(Club(subject, IconTags(tag, false).findIcon(), adviserName));
+
+          bool unread = false;
+          await db.collection('conversations').get().then((value) => {
+                value.docs.forEach((element) {
+                  if (element.id.contains(clubRef) &&
+                      element.data()['studentUnreadMessages'] > 0 && element.id.contains(widget.user.displayName!
+                              .replaceAll(' ', '_')
+                              .toLowerCase())) {
+                    unread = true;
+                  }
+                })
+              });
+          clubList.add(Club(
+              subject, IconTags(tag, false).findIcon(), adviserName, unread));
         }
 
         await actvityCollection.collection('events').get().then((value) {
@@ -230,13 +257,29 @@ class _HomeState extends State<Home> {
                 teacherName = teacherSnapshot.data()!['lastName'];
               }
 
-              classList.add(SchoolClass(
-                  docSnapshot.data()!['name'],
-                  IconTags(docSnapshot.data()!['type'], false).findIcon(),
-                  docSnapshot.data()!['period'],
-                  teacherName));
-              classList.sort((a, b) {
-                return a.period.compareTo(b.period);
+              bool unread = false;
+              await db.collection('conversations').get().then((value) => {
+                    value.docs.forEach((element) {
+                      if (element.id.contains(docRef) &&
+                          element.data()['studentUnreadMessages'] > 0 &&
+                          element.id.contains(widget.user.displayName!
+                              .replaceAll(' ', '_')
+                              .toLowerCase())) {
+                        unread = true;
+                      }
+                    })
+                  });
+
+              setState(() {
+                classList.add(SchoolClass(
+                    docSnapshot.data()!['name'],
+                    IconTags(docSnapshot.data()!['type'], false).findIcon(),
+                    docSnapshot.data()!['period'],
+                    teacherName,
+                    unread));
+                classList.sort((a, b) {
+                  return a.period.compareTo(b.period);
+                });
               });
             }
           })
@@ -247,6 +290,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Color(0xffF7F7F7),
       body: SafeArea(
         top: true,
@@ -318,7 +362,7 @@ class _HomeState extends State<Home> {
                           // "see all" events button.
                           TextButton(
                               onPressed: () {
-                                Navigator.push(
+                                Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => StudentTab(
@@ -500,8 +544,7 @@ class _HomeState extends State<Home> {
                             ),
                             Expanded(
                               child: Container(
-                                child: LayoutBuilder(
-                                    builder: (context, constraints) {
+                                child: Builder(builder: (context) {
                                   if (isClasses == true) {
                                     return ListView.builder(
                                       controller: scrollController,
@@ -550,8 +593,60 @@ class _HomeState extends State<Home> {
                                                                 .data()![
                                                                     'teacher']
                                                                 .split('/')[1];
-                                                        Navigator.push(
-                                                          context,
+
+                                                        var conversationSnapshot = await db
+                                                            .collection(
+                                                                'conversations')
+                                                            .doc(teacherId +
+                                                                widget.user
+                                                                    .displayName!
+                                                                    .replaceAll(
+                                                                        ' ',
+                                                                        '_')
+                                                                    .toLowerCase() +
+                                                                classList[index]
+                                                                    .name
+                                                                    .replaceAll(
+                                                                        ' ',
+                                                                        '_')
+                                                                    .toLowerCase() +
+                                                                '_p' +
+                                                                classList[index]
+                                                                    .period
+                                                                    .toString())
+                                                            .get();
+                                                        if (conversationSnapshot
+                                                            .exists) {
+                                                          db
+                                                              .collection(
+                                                                  'conversations')
+                                                              .doc(teacherId
+                                                                      .replaceAll(
+                                                                          ' ', '_')
+                                                                      .toLowerCase() +
+                                                                  widget.user
+                                                                      .displayName!
+                                                                      .replaceAll(
+                                                                          ' ', '_')
+                                                                      .toLowerCase() +
+                                                                  classList[
+                                                                          index]
+                                                                      .name
+                                                                      .replaceAll(
+                                                                          ' ',
+                                                                          '_')
+                                                                      .toLowerCase() +
+                                                                  '_p' +
+                                                                  classList[
+                                                                          index]
+                                                                      .period
+                                                                      .toString())
+                                                              .update({
+                                                            'studentUnreadMessages':
+                                                                0
+                                                          });
+                                                        }
+                                                        _navigator.push(
                                                           MaterialPageRoute(
                                                               builder:
                                                                   (context) =>
@@ -569,6 +664,8 @@ class _HomeState extends State<Home> {
                                                                             .toLowerCase(),
                                                                         isClass:
                                                                             true,
+                                                                        user: widget
+                                                                            .user,
                                                                       )),
                                                         );
                                                       }
@@ -673,8 +770,7 @@ class _HomeState extends State<Home> {
                                                                     'adviser']
                                                                 .split('/')[1];
 
-                                                        Navigator.push(
-                                                          context,
+                                                        _navigator.push(
                                                           MaterialPageRoute(
                                                               builder:
                                                                   (context) =>
@@ -694,6 +790,8 @@ class _HomeState extends State<Home> {
                                                                             .toLowerCase(),
                                                                         isClass:
                                                                             false,
+                                                                        user: widget
+                                                                            .user,
                                                                       )),
                                                         );
                                                       }
@@ -787,7 +885,21 @@ class _HomeState extends State<Home> {
                 ),
               ),
               subtitle: Text(schoolClass.teacher),
-              trailing: Text('P' + schoolClass.period.toString()),
+              trailing: schoolClass.unread
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('P' + schoolClass.period.toString()),
+                        SizedBox(
+                          height: 2,
+                        ),
+                        CircleAvatar(
+                          backgroundColor: Color(0xff78CAD2),
+                          radius: 4,
+                        )
+                      ],
+                    )
+                  : Text('P' + schoolClass.period.toString()),
             ),
             Divider(
               indent: 20,
@@ -816,6 +928,12 @@ class _HomeState extends State<Home> {
                 ),
               ),
               subtitle: Text(club.adviser),
+              trailing: club.unread
+                  ? CircleAvatar(
+                      backgroundColor: Color(0xff78CAD2),
+                      radius: 4,
+                    )
+                  : Text(''),
             ),
             Divider(
               indent: 20,
