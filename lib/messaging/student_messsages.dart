@@ -50,6 +50,12 @@ class _MessagesPageState extends State<MessagesPage> {
   // This is the url of the image to display the image
   String imageUrl = '';
 
+  // This is the url of the image to display the image
+  List imageUrls = [];
+
+  //Multiple Images
+  List<File> selectedImages = [];
+
   // This is the name of the teacher initialized in Firebase
   String teacherName = '';
 
@@ -122,6 +128,111 @@ class _MessagesPageState extends State<MessagesPage> {
     super.initState();
   }
 
+  //Show the sheet with attachment options
+  showAttachmentSheet(context) {
+    showModalBottomSheet(
+        context: context,
+        builder: (BuildContext bc) {
+          return Container(
+              child: Wrap(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 15.0),
+                child: ListTile(
+                    leading: Icon(Icons.image),
+                    title: Text('Image'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await uploadImage(false);
+                    }),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 15.0),
+                child: ListTile(
+                    leading: Icon(Icons.camera_alt),
+                    title: Text('Camera'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await uploadImage(true);
+                    }),
+              )
+            ],
+          ));
+        });
+  }
+
+  Future<void> uploadImage(bool camera) async {
+    setState(() {
+      isPhoto = true;
+    });
+    print("the value of isPhoto: " + isPhoto.toString());
+    // Pick image from gallery
+    ImagePicker picker = ImagePicker();
+    XFile? image;
+
+    if (!camera) {
+      //image = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFiles =
+          await picker.pickMultiImage(maxHeight: 1000, maxWidth: 1000);
+      List<XFile> xFilePick = pickedFiles;
+
+      //if at least one photo is selected, it will add to the list
+      if (xFilePick.isNotEmpty) {
+        print("inside if statement at 489");
+        for (var index = 0; index < xFilePick.length; index++) {
+          setState(() {
+            selectedImages.add(File(xFilePick[index].path));
+          });
+        }
+
+        print("this is the length of selectedImages: " +
+            selectedImages.length.toString());
+      }
+    } else {
+      image = await picker.pickImage(source: ImageSource.camera);
+
+      setState(() {
+        selectedImages.add(File(image!.path));
+      });
+
+      // Check if image null
+      if (image == null) {
+        //print('image is null');
+        return;
+      }
+    }
+
+    for (int index = 0; index < selectedImages.length; index++) {
+      //Timestamp for unique name for image
+      String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Upload to Firebase storage
+      //Get a reference to storage
+      Reference referenceRoot = FirebaseStorage.instance.ref();
+      Reference referenceDirImages = referenceRoot.child('messageImages');
+
+      // Create reference for image to be stored
+      Reference referenceImageToUpload =
+          referenceDirImages.child(uniqueFileName);
+
+      // Handle error/success
+      try {
+        //Store the file
+        await referenceImageToUpload.putFile(selectedImages[index]);
+
+        //get download URL
+        var downloadUrl = await referenceImageToUpload.getDownloadURL();
+        setState(() {
+          imageUrls.add(downloadUrl);
+        });
+
+        // Navigator.pop(context as BuildContext);
+      } catch (error) {}
+    }
+    print("this is the length of imageUrls at 590!: " +
+        imageUrls.length.toString());
+  }
+
   // This is the text box widget at the bottom of the screen.
   Widget buildInputBox() {
     return Align(
@@ -148,6 +259,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
                     // The user will need to give permission to access images
                     onPressed: () {
+                      showAttachmentSheet(context);
                       () async {
                         var _permissionStatus = await Permission.storage.status;
 
@@ -160,7 +272,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           });
                         }
                       }();
-                      uploadImage();
+                      // uploadImage();
                     },
                   );
 
@@ -207,13 +319,63 @@ class _MessagesPageState extends State<MessagesPage> {
                     // If the user has selected an image, the image will show in a container and the text field
                     // won't show up.
                   } else {
-                    return Container(
-                      height: MediaQuery.of(context).size.height * 0.1,
-                      width: MediaQuery.of(context).size.width * 0.5,
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.network(imageUrl)),
-                    );
+                    if (imageUrls.length == 1) {
+                      return Container(
+                        height: 110,
+                        width: 110,
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.network(imageUrls[0])),
+                      );
+                    } else if (imageUrls.length > 1) {
+                      //multiple images
+
+                      print("imageUrls length at 272: " +
+                          imageUrls.length.toString());
+                      return Container(
+                          child: SingleChildScrollView(
+                              child: Column(
+                        children: [
+                          SizedBox(
+                              height: 140,
+                              child: ListView.builder(
+                                  itemCount: imageUrls.length,
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, index) {
+                                    //print(imageUrls[index].toString());
+                                    return Container(
+                                      height: 140,
+                                      width: 140,
+                                      margin: EdgeInsets.all(10),
+                                      child: ClipRRect(
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Image.network(imageUrls[index],
+                                                fit: BoxFit.cover),
+                                            Positioned(
+                                                right: 4,
+                                                top: 5,
+                                                child: IconButton(
+                                                  onPressed: () {
+                                                    //Deletes images from list and ListView
+                                                    imageUrls.removeAt(index);
+                                                    setState(() {});
+                                                  },
+                                                  icon:
+                                                      Icon(Icons.remove_circle),
+                                                  color: Colors.black,
+                                                ))
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }))
+                        ],
+                      )));
+                    } else {
+                      return LinearProgressIndicator();
+                    }
                   }
                 }),
               ),
@@ -225,21 +387,35 @@ class _MessagesPageState extends State<MessagesPage> {
                   elevation: 0,
                   backgroundColor: Color(0xff78CAD2),
                   child: Icon(Icons.send, size: 20),
-                  onPressed: () {
+                  onPressed: () async {
                     if (!isPhoto) {
+                      print("in wrong place");
                       String message = _textController.text;
                       print('message: ' + message);
                       sendMessage(message);
                       _textController.clear();
                       loadMessages();
+
+                      //will be a photo
                     } else {
                       print('in photo');
                       //send an image!
-                      //sendImage();
-                      setImageData();
+
+                      for (int index = 0; index < imageUrls.length; index++) {
+                        await setImageData(index);
+                        //sendImage(index);
+                      }
                       setState(() {
+                        print("image url when send!: " +
+                            imageUrls.length.toString());
+
                         isPhoto = false;
+                        selectedImages.clear();
+                        imageUrls.clear();
                       });
+
+                      // print("now the length should be 0: " +
+                      // selectedImages.length.toString();
                     }
                   }),
               SizedBox(
@@ -263,7 +439,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   // This will set the image data in Firebase, so that it can be later retrieved.
   // It is set in the messages collection, which is in the conversations collection.
-  Future<void> setImageData() async {
+  Future<void> setImageData(int index) async {
     CollectionReference imageMessageRef = await db
         .collection("conversations")
         .doc(widget.teacher + widget.studentID + widget.className)
@@ -271,7 +447,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
     var data = {
       'className': widget.className,
-      'content': imageUrl,
+      'content': imageUrls[index],
       'isImage': true,
       'announcement': false,
       'reciever': widget.teacher,
@@ -300,43 +476,6 @@ class _MessagesPageState extends State<MessagesPage> {
       'studentUnreadMessages': 0,
       'lastMessageDate': DateTime.now(),
     });
-  }
-
-  // This will use the image picker to choose an image from the user's photos
-  void uploadImage() async {
-    // Pick image from gallery
-    ImagePicker picker = ImagePicker();
-    XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    // Check if image null
-    if (image == null) {
-      print('image is null');
-      return;
-    }
-
-    //T imestamp for unique name for image
-    String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
-
-    // Upload to Firebase storage
-    //Gget a reference to storage
-    Reference referenceRoot = FirebaseStorage.instance.ref();
-    Reference referenceDirImages = referenceRoot.child('messageImages');
-
-    // Create reference for image to be stored
-    Reference referenceImageToUpload = referenceDirImages.child(uniqueFileName);
-
-    // Handle error/success
-    try {
-      //Store the file
-      await referenceImageToUpload.putFile(File(image.path));
-
-      //get download URL
-      imageUrl = await referenceImageToUpload.getDownloadURL();
-
-      setState(() {
-        isPhoto = true;
-      });
-    } catch (error) {}
   }
 
   // This function load previous messages using a StreamBuilder.
@@ -648,7 +787,8 @@ class _MessagesPageState extends State<MessagesPage> {
                     'lastMessageDate':
                         conversationSnapshot.data()!['lastMessageDate'],
                     'studentUnreadMessages': 0,
-                    'teacherUnreadMessages': conversationSnapshot.data()!['teacherUnreadMessages']
+                    'teacherUnreadMessages':
+                        conversationSnapshot.data()!['teacherUnreadMessages']
                   });
                 }
 

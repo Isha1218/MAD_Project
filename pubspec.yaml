@@ -64,12 +64,11 @@ dependencies:
   motion_tab_bar_v2: ^0.2.6
   animated_notch_bottom_bar: ^1.0.0
   page_transition: ^2.0.9
+  rive_splash_screen: ^0.1.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-  # syncfusion_flutter_calendar: ^19.2.44
-  # syncfusion_flutter_datepicker: ^20.3.49
 
 dev_dependencies:
   flutter_test:
@@ -98,6 +97,7 @@ flutter:
   assets:
     - images/logo.png
     - images/money_bookkeeper.png
+    - assets/
   #   - images/a_dot_ham.jpeg
 
 flutter_icons:

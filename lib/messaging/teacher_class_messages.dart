@@ -286,6 +286,7 @@ class _ListingsPageState extends State<ListingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -526,6 +527,7 @@ class _ListingsPageState extends State<ListingsPage> {
                           return AlertDialog(
                             title: Text('Send Announcement'),
                             content: TextField(
+                                textInputAction: TextInputAction.done,
                                 maxLines: null,
                                 controller: _announcementController,
                                 decoration: InputDecoration(

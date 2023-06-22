@@ -54,20 +54,19 @@ class GoogleSignInProvider extends ChangeNotifier {
   }
 
   // Checks how the authorization state has changed and returns page accordingly.
+  // Returns a widget for a page with the user's login result
   handleAuthState() {
     return StreamBuilder(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (BuildContext context, snapshot) {
           if (snapshot.hasData) {
-            // If user has been successfully authorized, they will have
-            // access to all of the student items.
+            // Successful authorization
             return StudentTab(
               user: user,
               selectedIndex: 0,
             );
           } else {
-            // If user has not been successfully authorized or they have
-            // signed out, the sign in page will be displayed.
+            // Unsuccesful authorization
             return MemberLoginPage();
           }
         });

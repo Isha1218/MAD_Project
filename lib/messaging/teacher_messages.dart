@@ -52,6 +52,12 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
   // This is the url of the image to display the image
   String imageUrl = '';
 
+  // This is the url of the image to display the image
+  List imageUrls = [];
+
+  //Multiple Images
+  List<File> selectedImages = [];
+
   // This is the name of the teacher initialized in Firebase
   String teacherName = '';
 
@@ -113,7 +119,6 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     super.initState();
   }
 
-  // The text field, add icon, and send icon will all be built here.
   Widget buildInputBox() {
     return Align(
       alignment: Alignment.bottomCenter,
@@ -139,6 +144,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
 
                     // The user will need to give permission to access images
                     onPressed: () {
+                      showAttachmentSheet(context);
                       () async {
                         var _permissionStatus = await Permission.storage.status;
 
@@ -151,7 +157,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                           });
                         }
                       }();
-                      uploadImage();
+                      // uploadImage();
                     },
                   );
 
@@ -198,13 +204,63 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                     // If the user has selected an image, the image will show in a container and the text field
                     // won't show up.
                   } else {
-                    return Container(
-                      height: MediaQuery.of(context).size.height * 0.1,
-                      width: MediaQuery.of(context).size.width * 0.5,
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.network(imageUrl)),
-                    );
+                    if (imageUrls.length == 1) {
+                      return Container(
+                        height: 110,
+                        width: 110,
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.network(imageUrls[0])),
+                      );
+                    } else if (imageUrls.length > 1) {
+                      //multiple images
+
+                      print("imageUrls length at 272: " +
+                          imageUrls.length.toString());
+                      return Container(
+                          child: SingleChildScrollView(
+                              child: Column(
+                        children: [
+                          SizedBox(
+                              height: 140,
+                              child: ListView.builder(
+                                  itemCount: imageUrls.length,
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, index) {
+                                    //print(imageUrls[index].toString());
+                                    return Container(
+                                      height: 140,
+                                      width: 140,
+                                      margin: EdgeInsets.all(10),
+                                      child: ClipRRect(
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Image.network(imageUrls[index],
+                                                fit: BoxFit.cover),
+                                            Positioned(
+                                                right: 4,
+                                                top: 5,
+                                                child: IconButton(
+                                                  onPressed: () {
+                                                    //Deletes images from list and ListView
+                                                    imageUrls.removeAt(index);
+                                                    setState(() {});
+                                                  },
+                                                  icon:
+                                                      Icon(Icons.remove_circle),
+                                                  color: Colors.black,
+                                                ))
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }))
+                        ],
+                      )));
+                    } else {
+                      return LinearProgressIndicator();
+                    }
                   }
                 }),
               ),
@@ -216,21 +272,35 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                   elevation: 0,
                   backgroundColor: Color(0xff78CAD2),
                   child: Icon(Icons.send, size: 20),
-                  onPressed: () {
+                  onPressed: () async {
                     if (!isPhoto) {
+                      print("in wrong place");
                       String message = _textController.text;
                       print('message: ' + message);
                       sendMessage(message);
                       _textController.clear();
                       loadMessages();
+
+                      //will be a photo
                     } else {
                       print('in photo');
                       //send an image!
-                      //sendImage();
-                      setImageData();
+
+                      for (int index = 0; index < imageUrls.length; index++) {
+                        await setImageData(index);
+                        //sendImage(index);
+                      }
                       setState(() {
+                        print("image url when send!: " +
+                            imageUrls.length.toString());
+
                         isPhoto = false;
+                        selectedImages.clear();
+                        imageUrls.clear();
                       });
+
+                      // print("now the length should be 0: " +
+                      // selectedImages.length.toString();
                     }
                   }),
               SizedBox(
@@ -243,8 +313,242 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     );
   }
 
-  Future<void> setImageData() async {
-    //store in corressponding document
+  //Show the sheet with attachment options
+  showAttachmentSheet(context) {
+    showModalBottomSheet(
+        context: context,
+        builder: (BuildContext bc) {
+          return Container(
+              child: Wrap(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 15.0),
+                child: ListTile(
+                    leading: Icon(Icons.image),
+                    title: Text('Image'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await uploadImage(false);
+                    }),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 15.0),
+                child: ListTile(
+                    leading: Icon(Icons.camera_alt),
+                    title: Text('Camera'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await uploadImage(true);
+                    }),
+              )
+            ],
+          ));
+        });
+  }
+
+  Future<void> uploadImage(bool camera) async {
+    setState(() {
+      isPhoto = true;
+    });
+    print("the value of isPhoto: " + isPhoto.toString());
+    // Pick image from gallery
+    ImagePicker picker = ImagePicker();
+    XFile? image;
+
+    if (!camera) {
+      //image = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFiles =
+          await picker.pickMultiImage(maxHeight: 1000, maxWidth: 1000);
+      List<XFile> xFilePick = pickedFiles;
+
+      //if at least one photo is selected, it will add to the list
+      if (xFilePick.isNotEmpty) {
+        print("inside if statement at 489");
+        for (var index = 0; index < xFilePick.length; index++) {
+          setState(() {
+            selectedImages.add(File(xFilePick[index].path));
+          });
+        }
+
+        print("this is the length of selectedImages: " +
+            selectedImages.length.toString());
+      }
+    } else {
+      image = await picker.pickImage(source: ImageSource.camera);
+
+      setState(() {
+        selectedImages.add(File(image!.path));
+      });
+
+      // Check if image null
+      if (image == null) {
+        //print('image is null');
+        return;
+      }
+    }
+
+    for (int index = 0; index < selectedImages.length; index++) {
+      //Timestamp for unique name for image
+      String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Upload to Firebase storage
+      //Get a reference to storage
+      Reference referenceRoot = FirebaseStorage.instance.ref();
+      Reference referenceDirImages = referenceRoot.child('messageImages');
+
+      // Create reference for image to be stored
+      Reference referenceImageToUpload =
+          referenceDirImages.child(uniqueFileName);
+
+      // Handle error/success
+      try {
+        //Store the file
+        await referenceImageToUpload.putFile(selectedImages[index]);
+
+        //get download URL
+        var downloadUrl = await referenceImageToUpload.getDownloadURL();
+        setState(() {
+          imageUrls.add(downloadUrl);
+        });
+
+        // Navigator.pop(context as BuildContext);
+      } catch (error) {}
+    }
+    print("this is the length of imageUrls at 590!: " +
+        imageUrls.length.toString());
+  }
+
+  // // The text field, add icon, and send icon will all be built here.
+  // Widget buildInputBox() {
+  //   return Align(
+  //     alignment: Alignment.bottomCenter,
+  //     child: Container(
+  //       child: Material(
+  //         shape: RoundedRectangleBorder(
+  //             borderRadius: BorderRadius.only(
+  //                 topLeft: Radius.circular(40), topRight: Radius.circular(40))),
+  //         elevation: 60,
+  //         shadowColor: Colors.grey,
+  //         color: Colors.white,
+  //         child: Padding(
+  //           padding: const EdgeInsets.fromLTRB(0, 15, 0, 32),
+  //           child: Row(children: [
+  //             LayoutBuilder(builder: (context, constraints) {
+  //               // If user has not selected photo, the add button will be present
+  //               if (!isPhoto) {
+  //                 return IconButton(
+  //                   icon: Icon(
+  //                     Icons.add,
+  //                     color: Colors.grey,
+  //                   ),
+
+  //                   // The user will need to give permission to access images
+  //                   onPressed: () {
+  //                     () async {
+  //                       var _permissionStatus = await Permission.storage.status;
+
+  //                       //should allow user to grant permission to image gallery
+  //                       if (_permissionStatus != PermissionStatus.granted) {
+  //                         PermissionStatus permissionStatus =
+  //                             await Permission.storage.request();
+  //                         setState(() {
+  //                           _permissionStatus = permissionStatus;
+  //                         });
+  //                       }
+  //                     }();
+  //                     uploadImage();
+  //                   },
+  //                 );
+
+  //                 // Otherwise, there will be a close icon to remove the image
+  //               } else {
+  //                 return IconButton(
+  //                   onPressed: () {
+  //                     setState(() {
+  //                       isPhoto = false;
+  //                     });
+  //                   },
+  //                   icon: Icon(Icons.close),
+  //                 );
+  //               }
+  //             }),
+  //             Expanded(
+  //               child: LayoutBuilder(builder: (context, constraints) {
+  //                 // If the user has not selected a photo, a text field will show for the user to type
+  //                 // as message.
+  //                 if (!isPhoto) {
+  //                   return TextFormField(
+  //                     textInputAction: TextInputAction.done,
+  //                     maxLines: null,
+  //                     controller: _textController,
+  //                     style: TextStyle(color: Colors.black),
+  //                     cursorColor: Colors.black,
+  //                     decoration: InputDecoration(
+  //                         hintText: 'Enter message here...',
+  //                         border: InputBorder.none,
+  //                         filled: true,
+  //                         fillColor: Color(0xffF7F7F7),
+  //                         enabledBorder: OutlineInputBorder(
+  //                             borderSide: BorderSide(color: Colors.white),
+  //                             borderRadius: BorderRadius.all(
+  //                               Radius.circular(40),
+  //                             )),
+  //                         focusedBorder: OutlineInputBorder(
+  //                             borderSide: BorderSide(color: Colors.white),
+  //                             borderRadius: BorderRadius.all(
+  //                               Radius.circular(40),
+  //                             ))),
+  //                   );
+
+  //                   // If the user has selected an image, the image will show in a container and the text field
+  //                   // won't show up.
+  //                 } else {
+  //                   return Container(
+  //                     height: MediaQuery.of(context).size.height * 0.1,
+  //                     width: MediaQuery.of(context).size.width * 0.5,
+  //                     child: ClipRRect(
+  //                         borderRadius: BorderRadius.circular(20),
+  //                         child: Image.network(imageUrl)),
+  //                   );
+  //                 }
+  //               }),
+  //             ),
+  //             SizedBox(width: 10),
+
+  //             // When the send button is clicked, either the message or the image will be
+  //             // added to Firebase and Firebase Storage and show up in the display.
+  //             FloatingActionButton(
+  //                 elevation: 0,
+  //                 backgroundColor: Color(0xff78CAD2),
+  //                 child: Icon(Icons.send, size: 20),
+  //                 onPressed: () {
+  //                   if (!isPhoto) {
+  //                     String message = _textController.text;
+  //                     print('message: ' + message);
+  //                     sendMessage(message);
+  //                     _textController.clear();
+  //                     loadMessages();
+  //                   } else {
+  //                     print('in photo');
+  //                     //send an image!
+  //                     //sendImage();
+  //                     setImageData();
+  //                     setState(() {
+  //                       isPhoto = false;
+  //                     });
+  //                   }
+  //                 }),
+  //             SizedBox(
+  //               width: 10,
+  //             )
+  //           ]),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  Future<void> setImageData(int index) async {
     CollectionReference imageMessageRef = await db
         .collection("conversations")
         .doc(widget.teacher + widget.studentID + widget.className)
@@ -252,7 +556,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
 
     var data = {
       'className': widget.className,
-      'content': imageUrl,
+      'content': imageUrls[index],
       'isImage': true,
       'announcement': false,
       'reciever': widget.studentID,
@@ -261,11 +565,12 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     };
 
     imageMessageRef.add(data);
-    // get the original number of undread messages and add 1
+
     var messageSnapshot = await db
         .collection('conversations')
         .doc(widget.teacher + widget.studentID + widget.className)
         .get();
+
     int messages = 0;
     if (messageSnapshot.exists) {
       messages = messageSnapshot['studentUnreadMessages'];
@@ -282,44 +587,83 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     });
   }
 
-  // This function calls an image picker to choose an image from user gallery
-  void uploadImage() async {
-    print('in upload image');
+  // Future<void> setImageData() async {
+  //   //store in corressponding document
+  //   CollectionReference imageMessageRef = await db
+  //       .collection("conversations")
+  //       .doc(widget.teacher + widget.studentID + widget.className)
+  //       .collection('messages');
 
-    // Pick image from gallery
-    ImagePicker picker = ImagePicker();
-    XFile? image = await picker.pickImage(source: ImageSource.gallery);
+  //   var data = {
+  //     'className': widget.className,
+  //     'content': imageUrl,
+  //     'isImage': true,
+  //     'announcement': false,
+  //     'reciever': widget.studentID,
+  //     'sender': widget.teacher,
+  //     'timeSent': Timestamp.now()
+  //   };
 
-    // Checks if image is null
-    if (image == null) {
-      print('image is null');
-      return;
-    }
+  //   imageMessageRef.add(data);
+  //   // get the original number of undread messages and add 1
+  //   var messageSnapshot = await db
+  //       .collection('conversations')
+  //       .doc(widget.teacher + widget.studentID + widget.className)
+  //       .get();
+  //   int messages = 0;
+  //   if (messageSnapshot.exists) {
+  //     messages = messageSnapshot['studentUnreadMessages'];
+  //   }
 
-    // Timestamp for unique name for image
-    String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
+  //   db
+  //       .collection('conversations')
+  //       .doc(widget.teacher + widget.studentID + widget.className)
+  //       .set({
+  //     'lastMessage': 'Photo sent',
+  //     'studentUnreadMessages': messages + 1,
+  //     'teacherUnreadMessages': 0,
+  //     'lastMessageDate': DateTime.now(),
+  //   });
+  // }
 
-    // Upload to Firebase storage
-    // Get a reference to storage
-    Reference referenceRoot = FirebaseStorage.instance.ref();
-    Reference referenceDirImages = referenceRoot.child('messageImages');
+  // // This function calls an image picker to choose an image from user gallery
+  // void uploadImage() async {
+  //   print('in upload image');
 
-    // Create reference for image to be stored
-    Reference referenceImageToUpload = referenceDirImages.child(uniqueFileName);
+  //   // Pick image from gallery
+  //   ImagePicker picker = ImagePicker();
+  //   XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    // Handle error/success
-    try {
-      // Store the file
-      await referenceImageToUpload.putFile(File(image.path));
+  //   // Checks if image is null
+  //   if (image == null) {
+  //     print('image is null');
+  //     return;
+  //   }
 
-      // Get download URL
-      imageUrl = await referenceImageToUpload.getDownloadURL();
+  //   // Timestamp for unique name for image
+  //   String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
 
-      setState(() {
-        isPhoto = true;
-      });
-    } catch (error) {}
-  }
+  //   // Upload to Firebase storage
+  //   // Get a reference to storage
+  //   Reference referenceRoot = FirebaseStorage.instance.ref();
+  //   Reference referenceDirImages = referenceRoot.child('messageImages');
+
+  //   // Create reference for image to be stored
+  //   Reference referenceImageToUpload = referenceDirImages.child(uniqueFileName);
+
+  //   // Handle error/success
+  //   try {
+  //     // Store the file
+  //     await referenceImageToUpload.putFile(File(image.path));
+
+  //     // Get download URL
+  //     imageUrl = await referenceImageToUpload.getDownloadURL();
+
+  //     setState(() {
+  //       isPhoto = true;
+  //     });
+  //   } catch (error) {}
+  // }
 
   // Widget will load previous messages
   Widget loadMessages() {
@@ -636,7 +980,11 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => ListingsPage(className: widget.className, teacher: widget.teacher, isClass: widget.isClass, user: widget.user)));
+                        builder: (context) => ListingsPage(
+                            className: widget.className,
+                            teacher: widget.teacher,
+                            isClass: widget.isClass,
+                            user: widget.user)));
               },
             ),
           ),
